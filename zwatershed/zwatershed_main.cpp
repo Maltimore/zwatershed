@@ -42,7 +42,7 @@ double LOW=  .0001;
 double HIGH= .9999;
 bool RECREATE_RG = true;
 
-std::map<std::string,std::list<float>> zwshed_initial_c(const size_t dimX, const size_t dimY, const size_t dimZ, float* affs)
+ZwatershedResult zwshed_initial_c(const size_t dimX, const size_t dimY, const size_t dimZ, float* affs)
 {
     std::cout << "calculating basic watershed..." << std::endl;
 
@@ -62,28 +62,30 @@ std::map<std::string,std::list<float>> zwshed_initial_c(const size_t dimX, const
     auto rg = get_region_graph(aff, seg_ref , counts_ref.size()-1);
 
     // save and return
-    std::map<std::string,std::list<float>> returnMap;
-    std::list<float> rg_data = * (new std::list<float>());
+    ZwatershedResult returnMap;
+    RegionGraph rg_data;
     for ( const auto& e: *rg ){
-        rg_data.push_back(std::get<1>(e));
-        rg_data.push_back(std::get<2>(e));
-        rg_data.push_back(std::get<0>(e));
+        RegionGraphEdge edge = {std::get<1>(e), std::get<2>(e)};
+        float weight = std::get<0>(e);
+        rg_data.edges.push_back(edge);
+        rg_data.weights.push_back(weight);
     }
-    std::list<float> seg_data = * (new std::list<float>());
-    std::list<float> counts_data = * (new std::list<float>());
+    std::vector<uint64_t> seg_data;
+    std::vector<size_t> counts_data;
     for(size_t i=0;i<dimX*dimY*dimZ;i++)
         seg_data.push_back(seg_ref->data()[i]);
     for (const auto& x:counts_ref)
         counts_data.push_back(x);
-    returnMap["rg"]=rg_data;
-    returnMap["seg"]=seg_data;
-    returnMap["counts"]=counts_data;
+    returnMap.rg=rg_data;
+    returnMap.seg=seg_data;
+    returnMap.counts=counts_data;
     return returnMap;
  }
 
 
-std::map<std::string,std::vector<double>> merge_with_stats(size_t dimX, size_t dimY, size_t dimZ, uint64_t * gt, float * rgn_graph,
-size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
+ZwatershedResult merge_with_stats(size_t dimX, size_t dimY, size_t dimZ, uint64_t * gt, RegionGraph& rgn_graph, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
+
+    size_t rgn_graph_len = rgn_graph.edges.size();
 
     //read data
     volume_ptr<uint64_t> gt_ptr(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ], boost::fortran_storage_order()));
@@ -96,8 +98,12 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
     }
     for(size_t i=0;i<counts_len;i++)
         counts.push_back(counts_in[i]);
-    for(size_t i=0;i<rgn_graph_len;i++)
-        (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
+    for(size_t i=0;i<rgn_graph_len;i++) {
+
+		float weight = rgn_graph.weights[i];
+		RegionGraphEdge edge = rgn_graph.edges[i];
+        (*rg).emplace_back(weight, edge.id1, edge.id2);
+    }
 
     // merge
     std::cout << "thresh: " << thresh << "\n";
@@ -105,35 +111,37 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
 	merge_segments_with_function(seg, rg, counts, square(t), 10,RECREATE_RG);
 
     // save
-    std::map<std::string,std::vector<double>> returnMap;
-    std::vector<double> seg_vector;
-    std::vector<double> r;
-    std::vector<double> rg_data; // = * (new std::list<float>());
-    std::vector<double> counts_data; // = * (new std::list<float>());
+	ZwatershedResult returnMap;
+    std::vector<uint64_t> seg_vector;
+    std::vector<double> stats;
+    RegionGraph rg_data;
+    std::vector<size_t> counts_data;
     for(size_t i=0;i<dimX*dimY*dimZ;i++)
-        seg_vector.push_back(((double)(seg->data()[i])));
+        seg_vector.push_back(seg->data()[i]);
     auto x = compare_volumes(*gt_ptr, *seg, dimX,dimY,dimZ);
-    r.push_back(std::get<0>(x));
-    r.push_back(std::get<1>(x));
-    r.push_back(std::get<2>(x));
-    r.push_back(std::get<3>(x));
+    stats.push_back(std::get<0>(x));
+    stats.push_back(std::get<1>(x));
+    stats.push_back(std::get<2>(x));
+    stats.push_back(std::get<3>(x));
     for ( const auto& e: *rg ){
-        rg_data.push_back(std::get<1>(e));
-        rg_data.push_back(std::get<2>(e));
-        rg_data.push_back(std::get<0>(e));
+        RegionGraphEdge edge = {std::get<1>(e), std::get<2>(e)};
+        float weight = std::get<0>(e);
+        rg_data.edges.push_back(edge);
+        rg_data.weights.push_back(weight);
     }
     for (const auto& x:counts)
         counts_data.push_back(x);
-    returnMap["seg"] = seg_vector;
-    returnMap["stats"] = r;
-    returnMap["rg"]=rg_data;
-    returnMap["counts"] = counts_data;
+    returnMap.seg = seg_vector;
+    returnMap.stats = stats;
+    returnMap.rg=rg_data;
+    returnMap.counts = counts_data;
     return returnMap;
 }
 
-std::map<std::string,std::vector<double>> merge_no_stats(size_t dimX, size_t dimY, size_t dimZ, float * rgn_graph,
-                                        size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
+ZwatershedResult merge_no_stats(size_t dimX, size_t dimY, size_t dimZ, RegionGraph& rgn_graph, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
     std::cout << "evaluating..." << std::endl;
+
+    size_t rgn_graph_len = rgn_graph.edges.size();
 
     // read data
     volume_ptr<uint64_t> seg(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ], boost::fortran_storage_order()));
@@ -143,31 +151,36 @@ std::map<std::string,std::vector<double>> merge_no_stats(size_t dimX, size_t dim
         seg->data()[i] = seg_in[i];
     for(size_t i=0;i<counts_len;i++)
         counts.push_back(counts_in[i]);
-    for(size_t i=0;i<rgn_graph_len;i++)
-        (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
+    for(size_t i=0;i<rgn_graph_len;i++) {
+
+		float weight = rgn_graph.weights[i];
+		RegionGraphEdge edge = rgn_graph.edges[i];
+        (*rg).emplace_back(weight, edge.id1, edge.id2);
+    }
 
     // merge
     std::cout << "thresh: " << thresh << "\n";
     double t = (double) thresh;
 	merge_segments_with_function(seg, rg, counts, square(t), 10,RECREATE_RG);
 
-	// save and return
-	std::map<std::string,std::vector<double>> returnMap;
-    std::vector<double> seg_vector;
-    std::vector<double> rg_data; // = * (new std::list<float>());
-    std::vector<double> counts_data; // = * (new std::list<float>());
+	// save
+	ZwatershedResult returnMap;
+    std::vector<uint64_t> seg_vector;
+    RegionGraph rg_data;
+    std::vector<size_t> counts_data;
     for(size_t i=0;i<dimX*dimY*dimZ;i++)
-        seg_vector.push_back(((double)(seg->data()[i])));
+        seg_vector.push_back(seg->data()[i]);
     for ( const auto& e: *rg ){
-        rg_data.push_back(std::get<1>(e));
-        rg_data.push_back(std::get<2>(e));
-        rg_data.push_back(std::get<0>(e));
+        RegionGraphEdge edge = {std::get<1>(e), std::get<2>(e)};
+        float weight = std::get<0>(e);
+        rg_data.edges.push_back(edge);
+        rg_data.weights.push_back(weight);
     }
     for (const auto& x:counts)
         counts_data.push_back(x);
-    returnMap["seg"] = seg_vector;
-    returnMap["rg"]=rg_data;
-    returnMap["counts"] = counts_data;
+    returnMap.seg = seg_vector;
+    returnMap.rg=rg_data;
+    returnMap.counts = counts_data;
     return returnMap;
  }
 
