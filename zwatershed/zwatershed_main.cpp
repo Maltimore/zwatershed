@@ -83,7 +83,7 @@ ZwatershedResult zwshed_initial_c(const size_t dimX, const size_t dimY, const si
  }
 
 
-ZwatershedResult merge_with_stats(size_t dimX, size_t dimY, size_t dimZ, uint64_t * gt, RegionGraph& rgn_graph, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
+ZwatershedResult merge_with_stats(size_t dimX, size_t dimY, size_t dimZ, uint64_t * gt, RegionGraph& rgn_graph, const std::vector<uint64_t>& seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
 
     size_t rgn_graph_len = rgn_graph.edges.size();
 
@@ -138,7 +138,7 @@ ZwatershedResult merge_with_stats(size_t dimX, size_t dimY, size_t dimZ, uint64_
     return returnMap;
 }
 
-ZwatershedResult merge_no_stats(size_t dimX, size_t dimY, size_t dimZ, RegionGraph& rgn_graph, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
+ZwatershedResult merge_no_stats(size_t dimX, size_t dimY, size_t dimZ, RegionGraph& rgn_graph, const std::vector<uint64_t>& seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
     std::cout << "evaluating..." << std::endl;
 
     size_t rgn_graph_len = rgn_graph.edges.size();

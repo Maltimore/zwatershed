@@ -59,7 +59,7 @@ def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NU
     counts = result.counts
     rg = result.rg
     f = h5py.File(seg_save_path + 'basic.h5', 'w')
-    f["seg"] = seg = np.array(result.seg, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
+    f["seg"] = np.array(result.seg, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
     f["counts"]=counts
     rg_edges = np.array(rg.edges, dtype=np.uint64)
     f["rg_edges"]=rg_edges.reshape(len(rg_edges)/2,2)
@@ -75,9 +75,7 @@ def zwshed_with_stats(np.ndarray[uint64_t, ndim=3] gt, np.ndarray[np.float32_t, 
     affs = np.asfortranarray(np.transpose(affs, (1, 2, 3, 0)))
     gt = np.array(gt, order='F')
     cdef ZwatershedResult result = zwshed_initial(gt, affs)
-    cdef np.ndarray[uint64_t, ndim=1] seg_in = result.seg
     cdef np.ndarray[uint64_t, ndim=1] counts_out = result.counts
-    cdef RegionGraph rgn_graph = result.rg
 
     counts_len = len(result.counts)
     dims = affs.shape
@@ -85,14 +83,12 @@ def zwshed_with_stats(np.ndarray[uint64_t, ndim=3] gt, np.ndarray[np.float32_t, 
     # get segs, stats
     segs, splits, merges, info_splits, info_merges = [], [], [], [], []
     for i in range(len(threshes)):
-        if(len(rgn_graph.edges) > 0):
-            result = merge_with_stats(dims[0], dims[1], dims[2], &gt[0, 0, 0], rgn_graph, &seg_in[0], &counts_out[0], counts_len, threshes[i])
-        seg = np.array(result.seg, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
-        rgn_graph = result.rg
+        if(len(result.rg.edges) > 0):
+            result = merge_with_stats(dims[0], dims[1], dims[2], &gt[0, 0, 0], result.rg, result.seg, &counts_out[0], counts_len, threshes[i])
         counts_out = np.array(result.counts, dtype='uint64')
         counts_len = len(counts_out)
-        seg_in = np.array(result.seg, dtype='uint64')
         if threshes[i] in save_threshes:
+            seg = np.array(result.seg, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
             if h5:
                 f = h5py.File(seg_save_path + 'seg_' + str(threshes[i]) + '.h5', 'w')
                 f["main"] = seg
@@ -129,21 +125,17 @@ def zwshed_no_stats(np.ndarray[np.float32_t, ndim=4] affs, threshes, save_thresh
     dims = affs.shape
     seg_empty = np.empty((dims[0], dims[1], dims[2]), dtype='uint64')
     cdef ZwatershedResult result = zwshed_initial(seg_empty, affs)
-    cdef np.ndarray[uint64_t, ndim=1] seg_in = result.seg
-    cdef np.ndarray[uint64_t, ndim=1] counts_out = result.counts
-    cdef RegionGraph rgn_graph = result.rg
+    cdef np.ndarray[uint64_t, ndim=1] counts_out = np.array(result.counts, dtype=np.uintp)
     segs = []
 
     # get segs, stats
     for i in range(len(threshes)):
-        if(len(rgn_graph.edges) > 0):
-            result = merge_no_stats(dims[0], dims[1], dims[2], rgn_graph, &seg_in[0], &counts_out[0], len(result.counts), threshes[i])
-        seg = np.array(result.seg, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
-        rgn_graph = result.rg
+        if(len(result.rg.edges) > 0):
+            result = merge_no_stats(dims[0], dims[1], dims[2], result.rg, result.seg, &counts_out[0], len(result.counts), threshes[i])
         counts_out = np.array(result.counts, dtype='uint64')
         counts_len = len(counts_out)
-        seg_in = result.seg
         if threshes[i] in save_threshes:
+            seg = np.array(result.seg, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
             if h5:
                 f = h5py.File(seg_save_path + 'seg_' + str(threshes[i]) + '.h5', 'w')
                 f["main"] = seg
@@ -304,10 +296,10 @@ cdef extern from "zwatershed.h":
 
     ZwatershedResult zwshed_initial_c(size_t dimX, size_t dimY, size_t dimZ, np.float32_t*affs)
     ZwatershedResult merge_with_stats(size_t dx, size_t dy, size_t dz, np.uint64_t*gt,
-                                                 RegionGraph& rgn_graph, uint64_t*seg,
+                                                 RegionGraph& rgn_graph, const vector[uint64_t]& seg,
                                                  uint64_t*counts, size_t counts_len, size_t thresh)
     ZwatershedResult merge_no_stats(size_t dx, size_t dy, size_t dz,
-                                               RegionGraph& rgn_graph, uint64_t*seg,
+                                               RegionGraph& rgn_graph, const vector[uint64_t]& seg,
                                                uint64_t*counts, size_t counts_len, size_t thresh)
     map[string, list[float]] zwshed_initial_c_arb(size_t dimX, size_t dimY, size_t dimZ, uint64_t*node1,
                                                   uint64_t*node2, float*edgeWeight, size_t n_edge)
