@@ -83,7 +83,7 @@ std::map<std::string,std::list<float>> zwshed_initial_c(const size_t dimX, const
 
 
 std::map<std::string,std::vector<double>> merge_with_stats(size_t dimX, size_t dimY, size_t dimZ, uint64_t * gt, float * rgn_graph,
-int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int thresh){
+size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
 
     //read data
     volume_ptr<uint64_t> gt_ptr(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ], boost::fortran_storage_order()));
@@ -94,9 +94,9 @@ int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int th
         gt_ptr->data()[i] = gt[i];
         seg->data()[i] = seg_in[i];
     }
-    for(int i=0;i<counts_len;i++)
+    for(size_t i=0;i<counts_len;i++)
         counts.push_back(counts_in[i]);
-    for(int i=0;i<rgn_graph_len;i++)
+    for(size_t i=0;i<rgn_graph_len;i++)
         (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
 
     // merge
@@ -132,7 +132,7 @@ int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int th
 }
 
 std::map<std::string,std::vector<double>> merge_no_stats(size_t dimX, size_t dimY, size_t dimZ, float * rgn_graph,
-                                        int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int thresh){
+                                        size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
     std::cout << "evaluating..." << std::endl;
 
     // read data
@@ -141,9 +141,9 @@ std::map<std::string,std::vector<double>> merge_no_stats(size_t dimX, size_t dim
     region_graph_ptr<uint64_t,float> rg( new region_graph<uint64_t,float> );
     for(size_t i=0;i<dimX*dimY*dimZ;i++)
         seg->data()[i] = seg_in[i];
-    for(int i=0;i<counts_len;i++)
+    for(size_t i=0;i<counts_len;i++)
         counts.push_back(counts_in[i]);
-    for(int i=0;i<rgn_graph_len;i++)
+    for(size_t i=0;i<rgn_graph_len;i++)
         (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
 
     // merge
@@ -177,7 +177,7 @@ std::map<std::string,std::vector<double>> merge_no_stats(size_t dimX, size_t dim
 
 
 std::map<std::string,std::list<float>> zwshed_initial_c_arb(const size_t dimX, const size_t dimY, const size_t dimZ, const uint64_t*node1,
-                                               const uint64_t*node2, const float*edgeWeight, const int n_edge){
+                                               const uint64_t*node2, const float*edgeWeight, const size_t n_edge){
     // read data
     std::cout << "calculating basic watershed..." << std::endl;
     volume_ptr<uint64_t> seg_ref;
@@ -214,7 +214,7 @@ std::map<std::string,std::list<float>> zwshed_initial_c_arb(const size_t dimX, c
 
 
 std::map<std::string,std::vector<double>> merge_with_stats_arb(size_t dimX,size_t dimY, size_t dimZ, uint64_t * gt, float * rgn_graph,
-int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int thresh){
+size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
 
     //read data
     volume_ptr<uint64_t> gt_ptr(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ], boost::c_storage_order() )); //, boost::fortran_storage_order()));
@@ -225,9 +225,9 @@ int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int th
         gt_ptr->data()[i] = gt[i];
         seg->data()[i] = seg_in[i];
     }
-    for(int i=0;i<counts_len;i++)
+    for(size_t i=0;i<counts_len;i++)
         counts.push_back(counts_in[i]);
-    for(int i=0;i<rgn_graph_len;i++)
+    for(size_t i=0;i<rgn_graph_len;i++)
         (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
 
     // merge
@@ -262,7 +262,7 @@ int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int th
 }
 
 std::map<std::string,std::vector<double>> merge_no_stats_arb(size_t dimX,size_t dimY, size_t dimZ, float * rgn_graph,
-int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int thresh){
+size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, size_t thresh){
 
     //read data
     volume_ptr<uint64_t> seg(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ]));
@@ -271,9 +271,9 @@ int rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, int counts_len, int th
     for(size_t i=0;i<dimX*dimY*dimZ;i++){
         seg->data()[i] = seg_in[i];
     }
-    for(int i=0;i<counts_len;i++)
+    for(size_t i=0;i<counts_len;i++)
         counts.push_back(counts_in[i]);
-    for(int i=0;i<rgn_graph_len;i++)
+    for(size_t i=0;i<rgn_graph_len;i++)
         (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
 
     // merge

@@ -30,7 +30,7 @@ using namespace std;
 std::pair<double,double>
 compare_volumes_arb(
                  volume<uint64_t>& gt,
-                 volume<uint64_t>& ws, int dimX, int dimY, int dimZ ){
+                 volume<uint64_t>& ws, size_t dimX, size_t dimY, size_t dimZ ){
     double rand_split = 0;
     double rand_merge = 0;
 

@@ -9,8 +9,8 @@
 using namespace std;
 template< typename ID, typename F, typename L, typename H >
 inline tuple< volume_ptr<ID>, vector<size_t> >
-watershed_arb(const int xdim, const int ydim, const int zdim, const ID* node1, const ID* node2,
-            const F* edgeWeight, const int n_edge, const L& lowv, const H& highv )
+watershed_arb(const size_t xdim, const size_t ydim, const size_t zdim, const ID* node1, const ID* node2,
+            const F* edgeWeight, const size_t n_edge, const L& lowv, const H& highv )
 {
 
     using affinity_t = F;
@@ -31,8 +31,8 @@ watershed_arb(const int xdim, const int ydim, const int zdim, const ID* node1, c
                                             //val stores min_index
     // 1 - filter by Tmax, Tmin
     map<ID,F> maxes; //find maxes for each vertex
-    map<pair<int,int>, float> weights;
-    for(int i=0;i<n_edge;i++){
+    map<pair<size_t,size_t>, float> weights;
+    for(size_t i=0;i<n_edge;i++){
         F aff = edgeWeight[i];
         ID v1 = node1[i];
         ID v2 = node2[i];
@@ -152,7 +152,7 @@ watershed_arb(const int xdim, const int ydim, const int zdim, const ID* node1, c
     for(ID i=0;i<size;i++)
         counts_map[seg_raw[i]]++;
 
-    int new_label = 1;
+    size_t new_label = 1;
     for (const auto &pair:counts_map){
         renum[pair.first] = new_label;
         counts.push_back(counts_map[pair.first]);

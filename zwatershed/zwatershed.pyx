@@ -259,7 +259,7 @@ def zwshed_no_stats_arb(dims, np.ndarray[uint64_t, ndim=1] node1,
         return segs
 
 def zwshed_initial_arb(np.ndarray[uint64_t, ndim=3] seg, np.ndarray[uint64_t, ndim=1] node1,
-                       np.ndarray[uint64_t, ndim=1] node2, int n_edge, np.ndarray[float, ndim=1] edgeWeight):
+                       np.ndarray[uint64_t, ndim=1] node2, size_t n_edge, np.ndarray[float, ndim=1] edgeWeight):
     cdef np.ndarray[uint64_t, ndim=1] counts = np.empty(1, dtype='uint64')
     dims = seg.shape
     map = zwshed_initial_c_arb(dims[0], dims[1], dims[2], &node1[0], &node2[0], &edgeWeight[0], n_edge)
@@ -273,16 +273,16 @@ def zwshed_initial_arb(np.ndarray[uint64_t, ndim=3] seg, np.ndarray[uint64_t, nd
 cdef extern from "zwatershed.h":
     map[string, list[float]] zwshed_initial_c(size_t dimX, size_t dimY, size_t dimZ, np.float32_t*affs)
     map[string, vector[double]] merge_with_stats(size_t dx, size_t dy, size_t dz, np.uint64_t*gt,
-                                                 np.float32_t*rgn_graph, int rgn_graph_len, uint64_t*seg,
-                                                 uint64_t*counts, int counts_len, int thresh)
+                                                 np.float32_t*rgn_graph, size_t rgn_graph_len, uint64_t*seg,
+                                                 uint64_t*counts, size_t counts_len, size_t thresh)
     map[string, vector[double]] merge_no_stats(size_t dx, size_t dy, size_t dz,
-                                               np.float32_t*rgn_graph, int rgn_graph_len, uint64_t*seg,
-                                               uint64_t*counts, int counts_len, int thresh)
+                                               np.float32_t*rgn_graph, size_t rgn_graph_len, uint64_t*seg,
+                                               uint64_t*counts, size_t counts_len, size_t thresh)
     map[string, list[float]] zwshed_initial_c_arb(size_t dimX, size_t dimY, size_t dimZ, uint64_t*node1,
-                                                  uint64_t*node2, float*edgeWeight, int n_edge)
+                                                  uint64_t*node2, float*edgeWeight, size_t n_edge)
     map[string, vector[double]] merge_with_stats_arb(size_t dx, size_t dy, size_t dz, np.uint64_t*gt,
-                                                     np.float32_t*rgn_graph, int rgn_graph_len, uint64_t*seg,
-                                                     uint64_t*counts, int counts_len, int thresh)
+                                                     np.float32_t*rgn_graph, size_t rgn_graph_len, uint64_t*seg,
+                                                     uint64_t*counts, size_t counts_len, size_t thresh)
     map[string, vector[double]] merge_no_stats_arb(size_t dx, size_t dy, size_t dz,
-                                                   np.float32_t*rgn_graph, int rgn_graph_len, uint64_t*seg,
-                                                   uint64_t*counts, int counts_len, int thresh)
+                                                   np.float32_t*rgn_graph, size_t rgn_graph_len, uint64_t*seg,
+                                                   uint64_t*counts, size_t counts_len, size_t thresh)

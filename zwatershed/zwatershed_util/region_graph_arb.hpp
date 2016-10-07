@@ -9,7 +9,7 @@ using namespace std;
 template< typename ID, typename F >
 inline region_graph_ptr<ID,F>
 get_region_graph_arb( //const affinity_graph_ptr<F>& aff_ptr,
-                const ID*node1, const ID*node2, const F*edgeWeight, int n_edge,
+                const ID*node1, const ID*node2, const F*edgeWeight, size_t n_edge,
                   const volume_ptr<ID> seg_ptr, std::size_t max_segid)
 {
 
@@ -18,7 +18,7 @@ get_region_graph_arb( //const affinity_graph_ptr<F>& aff_ptr,
     ID* seg = seg_ptr->data();
     std::vector<std::map<ID,F>> edges(max_segid+1);
     std::ptrdiff_t x = 1;
-    for(int i=0;i<n_edge;i++){
+    for(size_t i=0;i<n_edge;i++){
         ID n1 = node1[i];
         ID n2 = node2[i];
         F w = edgeWeight[i];
