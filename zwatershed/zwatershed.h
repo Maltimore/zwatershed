@@ -16,6 +16,14 @@ struct Metrics {
 	double rand_merge;
 };
 
+std::vector<Metrics> process_thresholds(
+		const std::vector<size_t>& thresholds,
+		size_t width, size_t height, size_t depth,
+		const float* affinity_data,
+		const std::vector<uint64_t*>& segmentation_data,
+		const uint32_t* ground_truth_data);
+
+
 struct RegionGraphEdge {
 
 	uint64_t id1;

@@ -3,11 +3,40 @@ from libcpp.map cimport map
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp.pair cimport pair
-from libc.stdint cimport uint64_t
+from libc.stdint cimport uint64_t, uint32_t
 import numpy as np
 import os
 cimport numpy as np
 import h5py
+
+def zwatershed_unified(np.ndarray[np.float32_t, ndim=4] affs, threshes, np.ndarray[uint32_t, ndim=3] gt = None):
+
+    cdef vector[uint64_t*]            segmentation_data
+    cdef np.ndarray[uint64_t, ndim=3] segmentation
+    cdef uint32_t*                    gt_data
+
+    if gt is not None:
+        gt_data = &gt[0,0,0]
+
+    segmentations = []
+    volume_shape = (affs.shape[0], affs.shape[1], affs.shape[2])
+
+    threshes.sort()
+    for i in range(len(threshes)):
+        segmentation = np.array(volume_shape, dtype=np.uint64)
+        segmentations.append(segmentation)
+        segmentation_data.push_back(&segmentation[0,0,0])
+
+    metrics = process_thresholds(
+        threshes,
+        affs.shape[0], affs.shape[1], affs.shape[2],
+        &affs[0, 0, 0, 0],
+        segmentation_data,
+        gt_data)
+
+    if gt is not None:
+        return (segmentations, metrics)
+    return segmentations
 
 #-------------- interface methods --------------------------------------------------------------
 def zwatershed_and_metrics(gt, affs, threshes, save_threshes):
@@ -260,6 +289,14 @@ def zwshed_initial_arb(np.ndarray[uint64_t, ndim=3] seg, np.ndarray[uint64_t, nd
 #-------------- c++ methods --------------------------------------------------------------
 cdef extern from "zwatershed.h":
 
+    struct Metrics:
+        double voi_split
+        double voi_merge
+        double rand_split
+        double rand_merge
+
+    vector[Metrics] process_thresholds(vector[size_t] thresholds, size_t width, size_t height, size_t depth, np.float32_t* affs, vector[uint64_t*]& segmentation_data, uint32_t* gt_data)
+
     #struct RegionGraphEdge {
 
         #uint64_t id1;
@@ -298,8 +335,7 @@ cdef extern from "zwatershed.h":
     ZwatershedResult merge_with_stats(size_t dx, size_t dy, size_t dz, np.uint64_t*gt,
                                                  RegionGraph& rgn_graph, const vector[uint64_t]& seg,
                                                  uint64_t*counts, size_t counts_len, size_t thresh)
-    ZwatershedResult merge_no_stats(size_t dx, size_t dy, size_t dz,
-                                               RegionGraph& rgn_graph, const vector[uint64_t]& seg,
+    ZwatershedResult merge_no_stats(size_t dx, size_t dy, size_t dz, RegionGraph& rgn_graph, const vector[uint64_t]& seg,
                                                uint64_t*counts, size_t counts_len, size_t thresh)
     map[string, list[float]] zwshed_initial_c_arb(size_t dimX, size_t dimY, size_t dimZ, uint64_t*node1,
                                                   uint64_t*node2, float*edgeWeight, size_t n_edge)
