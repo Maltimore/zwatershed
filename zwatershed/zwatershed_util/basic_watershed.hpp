@@ -4,10 +4,13 @@
 
 #include <iostream>
 
-template< typename ID, typename F, typename L, typename H >
+template< typename ID, typename AG_P, typename L, typename H >
 inline std::tuple< volume_ptr<ID>, std::vector<std::size_t> >
-watershed( const affinity_graph_ptr<F>& aff_ptr, const L& lowv, const H& highv )
+watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
 {
+    typedef typename AG_P::element_type AG;
+    typedef typename AG::element        F;
+
     using affinity_t = F;
     using id_t       = ID;
     using traits     = watershed_traits<id_t>;
@@ -29,8 +32,8 @@ watershed( const affinity_graph_ptr<F>& aff_ptr, const L& lowv, const H& highv )
     auto& counts = std::get<1>(result);
     counts[0] = 0;
 
-    affinity_graph<F>& aff = *aff_ptr;
-    volume<id_t>&      seg = *std::get<0>(result);
+    auto&         aff = *aff_ptr;
+    volume<id_t>& seg = *std::get<0>(result);
 
     id_t* seg_raw = seg.data();
 

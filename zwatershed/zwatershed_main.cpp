@@ -2,19 +2,6 @@
  * developed and maintained by Srinivas C. Turaga <sturaga@mit.edu>
  * do not distribute without permission.
  */
-#include "zwatershed.h"
-//#pragma once
-#include "zwatershed_util/agglomeration.hpp"
-#include "zwatershed_util/region_graph.hpp"
-#include "zwatershed_util/basic_watershed.hpp"
-#include "zwatershed_util/limit_functions.hpp"
-#include "zwatershed_util/types.hpp"
-#include "zwatershed_util/main_helper.hpp"
-// arb funcs
-#include "zwatershed_util/region_graph_arb.hpp"
-#include "zwatershed_util/basic_watershed_arb.hpp"
-#include "zwatershed_util/main_helper_arb.hpp"
-
 
 #include <memory>
 #include <type_traits>
@@ -24,23 +11,112 @@
 #include <cstdio>
 #include <cstddef>
 #include <cstdint>
-#include <queue>
-#include <vector>
 #include <algorithm>
-#include <tuple>
 #include <map>
 #include <list>
 #include <set>
 #include <vector>
 #include <chrono>
-#include <fstream>
 #include <string>
-#include <boost/make_shared.hpp>
+
+//#pragma once
+#include "zwatershed.h"
+#include "zwatershed_util/agglomeration.hpp"
+#include "zwatershed_util/region_graph.hpp"
+#include "zwatershed_util/basic_watershed.hpp"
+#include "zwatershed_util/limit_functions.hpp"
+#include "zwatershed_util/types.hpp"
+#include "zwatershed_util/main_helper.hpp"
+
+// arb funcs
+#include "zwatershed_util/region_graph_arb.hpp"
+#include "zwatershed_util/basic_watershed_arb.hpp"
+#include "zwatershed_util/main_helper_arb.hpp"
+
 using namespace std;
 // these values based on 5% at iter = 10000
 double LOW=  .0001;
 double HIGH= .9999;
 bool RECREATE_RG = true;
+
+std::vector<Metrics> process_thresholds(
+		const std::vector<size_t>& thresholds,
+		size_t width, size_t height, size_t depth,
+		const float* affinity_data,
+		const std::vector<uint64_t*>& segmentation_data,
+		const uint32_t* ground_truth_data = 0) {
+
+	size_t num_voxels = width*height*depth;
+
+	assert(thresholds.size() == segmentation_data.size());
+
+	// wrap affinities (no copy)
+	affinity_graph_ref_ptr<float> affinities(
+			new affinity_graph_ref<float>(
+					affinity_data,
+					boost::extents[width][height][depth][3],
+					boost::fortran_storage_order()
+			)
+	);
+
+	// wrap ground-truth (no copy)
+	volume_ref_ptr<uint32_t> ground_truth;
+	if (ground_truth_data != 0) {
+
+		ground_truth = volume_ref_ptr<uint32_t>(
+				new volume_ref<uint32_t>(
+						ground_truth_data,
+						boost::extents[width][height][depth],
+						boost::fortran_storage_order()
+				)
+		);
+	}
+
+	std::cout << "performing initial watershed segmentation..." << std::endl;
+
+	volume_ptr<uint64_t> segmentation;
+	std::vector<size_t> counts;
+	std::tie(segmentation, counts) = watershed<uint64_t>(affinities, LOW, HIGH);
+
+	std::cout << "extracting region graph..." << std::endl;
+	region_graph_ptr<uint64_t, float> reg_graph = get_region_graph(affinities, segmentation, counts.size() - 1);
+
+	std::vector<Metrics> threshold_metrics;
+
+	for (int i = 0; i < thresholds.size(); i++) {
+
+		size_t threshold = thresholds[i];
+
+		std::cout << "merging until threshold " << threshold << std::endl;
+		merge_segments_with_function(
+				segmentation,
+				reg_graph,
+				counts,
+				square((double)threshold),
+				10, // TODO: what is it?
+				RECREATE_RG
+		);
+
+		// make a copy of the current segmentation
+		std::copy(segmentation->data(), segmentation->data() + num_voxels, &segmentation_data[i][0]);
+
+		if (ground_truth) {
+
+			std::cout << "evaluating current segmentation against ground-truth" << std::endl;
+
+			auto m = compare_volumes(*ground_truth, *segmentation, width, height, depth);
+			Metrics metrics;
+			metrics.rand_split = std::get<0>(m);
+			metrics.rand_merge = std::get<1>(m);
+			metrics.voi_split  = std::get<2>(m);
+			metrics.voi_merge  = std::get<3>(m);
+
+			threshold_metrics.push_back(metrics);
+		}
+	}
+
+	return threshold_metrics;
+}
 
 ZwatershedResult zwshed_initial_c(const size_t dimX, const size_t dimY, const size_t dimZ, float* affs)
 {

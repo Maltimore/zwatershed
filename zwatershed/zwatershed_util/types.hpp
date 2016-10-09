@@ -39,13 +39,25 @@ template < typename T >
 using volume = boost::multi_array<T,3>;
 
 template < typename T >
+using volume_ref = boost::const_multi_array_ref<T,3>;
+
+template < typename T >
 using affinity_graph = boost::multi_array<T,4>;
+
+template < typename T >
+using affinity_graph_ref = boost::const_multi_array_ref<T,4>;
 
 template < typename T >
 using volume_ptr = std::shared_ptr<volume<T>>;
 
 template < typename T >
+using volume_ref_ptr = std::shared_ptr<volume_ref<T>>;
+
+template < typename T >
 using affinity_graph_ptr = std::shared_ptr<affinity_graph<T>>;
+
+template < typename T >
+using affinity_graph_ref_ptr = std::shared_ptr<affinity_graph_ref<T>>;
 
 template< typename ID, typename F >
 using region_graph = std::vector<std::tuple<F,ID,ID>>;

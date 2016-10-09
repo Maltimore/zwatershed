@@ -8,6 +8,14 @@
 #include <vector>
 #include <utility>
 
+struct Metrics {
+
+	double voi_split;
+	double voi_merge;
+	double rand_split;
+	double rand_merge;
+};
+
 struct RegionGraphEdge {
 
 	uint64_t id1;

@@ -6,19 +6,21 @@
 #include <iostream>
 #include <map>
 
-template< typename ID, typename F >
-inline region_graph_ptr<ID,F>
-get_region_graph( const affinity_graph_ptr<F>& aff_ptr,
+template< typename ID, typename AG_P >
+inline region_graph_ptr<ID,typename AG_P::element_type::element>
+get_region_graph( const AG_P& aff_ptr,
                   const volume_ptr<ID> seg_ptr,
                   std::size_t max_segid)
 {
+    typedef typename AG_P::element_type AG;
+    typedef typename AG::element        F;
 
     std::ptrdiff_t xdim = aff_ptr->shape()[0];
     std::ptrdiff_t ydim = aff_ptr->shape()[1];
     std::ptrdiff_t zdim = aff_ptr->shape()[2];
 
     volume<ID>& seg = *seg_ptr;
-    affinity_graph<F> aff = *aff_ptr;
+    auto& aff = *aff_ptr;
 
     region_graph_ptr<ID,F> rg_ptr( new region_graph<ID,F> );
 
