@@ -21,7 +21,7 @@ std::vector<Metrics> process_thresholds(
 		size_t width, size_t height, size_t depth,
 		const float* affinity_data,
 		const std::vector<uint64_t*>& segmentation_data,
-		const uint32_t* ground_truth_data);
+		const uint32_t* ground_truth_data = 0);
 
 
 struct RegionGraphEdge {

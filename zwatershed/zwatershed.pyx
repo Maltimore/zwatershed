@@ -15,27 +15,30 @@ def zwatershed_unified(np.ndarray[np.float32_t, ndim=4] affs, threshes, np.ndarr
     cdef np.ndarray[uint64_t, ndim=3] segmentation
     cdef uint32_t*                    gt_data
 
-    if gt is not None:
-        gt_data = &gt[0,0,0]
-
     segmentations = []
     volume_shape = (affs.shape[0], affs.shape[1], affs.shape[2])
 
     threshes.sort()
     for i in range(len(threshes)):
-        segmentation = np.array(volume_shape, dtype=np.uint64)
+        segmentation = np.zeros(volume_shape, dtype=np.uint64)
         segmentations.append(segmentation)
         segmentation_data.push_back(&segmentation[0,0,0])
 
-    metrics = process_thresholds(
+    if gt is not None:
+        gt_data = &gt[0,0,0]
+        metrics = process_thresholds(
+            threshes,
+            affs.shape[0], affs.shape[1], affs.shape[2],
+            &affs[0, 0, 0, 0],
+            segmentation_data,
+            gt_data)
+        return (segmentations, metrics)
+
+    process_thresholds(
         threshes,
         affs.shape[0], affs.shape[1], affs.shape[2],
         &affs[0, 0, 0, 0],
-        segmentation_data,
-        gt_data)
-
-    if gt is not None:
-        return (segmentations, metrics)
+        segmentation_data)
     return segmentations
 
 #-------------- interface methods --------------------------------------------------------------
@@ -296,6 +299,7 @@ cdef extern from "zwatershed.h":
         double rand_merge
 
     vector[Metrics] process_thresholds(vector[size_t] thresholds, size_t width, size_t height, size_t depth, np.float32_t* affs, vector[uint64_t*]& segmentation_data, uint32_t* gt_data)
+    vector[Metrics] process_thresholds(vector[size_t] thresholds, size_t width, size_t height, size_t depth, np.float32_t* affs, vector[uint64_t*]& segmentation_data)
 
     #struct RegionGraphEdge {
 
