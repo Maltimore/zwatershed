@@ -21,7 +21,7 @@ def zwatershed_unified(np.ndarray[np.float32_t, ndim=4] affs, threshes, np.ndarr
     volume_shape = (affs.shape[1], affs.shape[2], affs.shape[3])
     threshes.sort()
     for i in range(len(threshes)):
-        segmentation = np.zeros(volume_shape, dtype=np.uint64, order='F')
+        segmentation = np.zeros(volume_shape, dtype=np.uint64)
         segmentations.append(segmentation)
         segmentation_data.push_back(&segmentation[0,0,0])
 

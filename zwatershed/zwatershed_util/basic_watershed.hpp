@@ -25,8 +25,7 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
     std::ptrdiff_t size = xdim * ydim * zdim;
 
     std::tuple< volume_ptr<id_t>, std::vector<std::size_t> > result
-        ( volume_ptr<id_t>( new volume<id_t>(boost::extents[zdim][ydim][xdim],
-                                           boost::fortran_storage_order())),
+        ( volume_ptr<id_t>( new volume<id_t>(boost::extents[zdim][ydim][xdim])),
           std::vector<std::size_t>(1) );
 
     auto& counts = std::get<1>(result);
@@ -64,7 +63,8 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
             }
 
 
-    const std::ptrdiff_t dir[6] = { -1, -zdim, -zdim*ydim, 1, zdim, zdim*ydim };
+	//                              -z          -y     -x  +z         +y    +x
+    const std::ptrdiff_t dir[6] = { -ydim*xdim, -xdim, -1, ydim*xdim, xdim, 1 };
     const id_t dirmask[6]  = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20 };
     const id_t idirmask[6] = { 0x08, 0x10, 0x20, 0x01, 0x02, 0x04 };
 
