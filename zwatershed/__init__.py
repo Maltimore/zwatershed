@@ -1,2 +1,2 @@
-from zwatershed import zwatershed_unified
+from zwatershed import zwatershed
 from par_funcs import partition_subvols,eval_with_spark,eval_with_par_map,stitch_and_save,merge_by_thresh

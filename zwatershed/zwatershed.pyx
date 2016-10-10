@@ -4,7 +4,7 @@ import os
 import numpy as np
 cimport numpy as np
 
-def zwatershed_unified(np.ndarray[np.float32_t, ndim=4] affs, thresholds, np.ndarray[uint32_t, ndim=3] gt = None):
+def zwatershed(np.ndarray[np.float32_t, ndim=4] affs, thresholds, np.ndarray[uint32_t, ndim=3] gt = None):
     '''
     Compute segmentations from an affinity graph for several thresholds.
 
