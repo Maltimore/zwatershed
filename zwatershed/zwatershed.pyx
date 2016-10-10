@@ -83,7 +83,24 @@ def zwatershed_unified(np.ndarray[np.float32_t, ndim=4] affs, thresholds, np.nda
         gt_data)
 
     if gt is not None:
-        return (segmentations, metrics)
+        stats = {
+            'V_Rand'      : 0,
+            'V_Rand_split': [],
+            'V_Rand_merge': [],
+            'V_Info'      : 0,
+            'V_Info_split': [],
+            'V_Info_merge': []
+        }
+        for metric in metrics:
+            rand_f_score = 2.0/(1.0/metric.rand_split + 1.0/metric.rand_merge)
+            voi_score = 2.0/(1.0/metric.voi_split + 1.0/metric.voi_merge)
+            stats['V_Rand'] = max(stats['V_Rand'], rand_f_score)
+            stats['V_Rand_split'].append(metric.rand_split)
+            stats['V_Rand_merge'].append(metric.rand_merge)
+            stats['V_Info'] = max(stats['V_Info'], voi_score)
+            stats['V_Info_split'].append(metric.voi_split)
+            stats['V_Info_merge'].append(metric.voi_merge)
+        return (segmentations, stats)
     return segmentations
 
 #-------------- interface methods --------------------------------------------------------------
