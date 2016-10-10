@@ -18,14 +18,14 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
     affinity_t low  = static_cast<affinity_t>(lowv);
     affinity_t high = static_cast<affinity_t>(highv);
 
-    std::ptrdiff_t xdim = aff_ptr->shape()[1];
+    std::ptrdiff_t zdim = aff_ptr->shape()[1];
     std::ptrdiff_t ydim = aff_ptr->shape()[2];
-    std::ptrdiff_t zdim = aff_ptr->shape()[3];
+    std::ptrdiff_t xdim = aff_ptr->shape()[3];
 
     std::ptrdiff_t size = xdim * ydim * zdim;
 
     std::tuple< volume_ptr<id_t>, std::vector<std::size_t> > result
-        ( volume_ptr<id_t>( new volume<id_t>(boost::extents[xdim][ydim][zdim],
+        ( volume_ptr<id_t>( new volume<id_t>(boost::extents[zdim][ydim][xdim],
                                            boost::fortran_storage_order())),
           std::vector<std::size_t>(1) );
 
@@ -41,30 +41,30 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
         for ( std::ptrdiff_t y = 0; y < ydim; ++y )
             for ( std::ptrdiff_t x = 0; x < xdim; ++x )
             {
-                id_t& id = seg[x][y][z] = 0;
+                id_t& id = seg[z][y][x] = 0;
 
-                F negx = (x>0) ? aff[0][x][y][z] : low;
-                F negy = (y>0) ? aff[1][x][y][z] : low;
-                F negz = (z>0) ? aff[2][x][y][z] : low;
-                F posx = (x<(xdim-1)) ? aff[0][x+1][y][z] : low;
-                F posy = (y<(ydim-1)) ? aff[1][x][y+1][z] : low;
-                F posz = (z<(zdim-1)) ? aff[2][x][y][z+1] : low;
+                F negz = (z>0) ? aff[0][z][y][x] : low;
+                F negy = (y>0) ? aff[1][z][y][x] : low;
+                F negx = (x>0) ? aff[2][z][y][x] : low;
+                F posz = (z<(zdim-1)) ? aff[0][z+1][y][x] : low;
+                F posy = (y<(ydim-1)) ? aff[1][z][y+1][x] : low;
+                F posx = (x<(xdim-1)) ? aff[2][z][y][x+1] : low;
 
                 F m = std::max({negx,negy,negz,posx,posy,posz});
 
                 if ( m > low )
                 {
-                    if ( negx == m || negx >= high ) { id |= 0x01; }
+                    if ( negz == m || negz >= high ) { id |= 0x01; }
                     if ( negy == m || negy >= high ) { id |= 0x02; }
-                    if ( negz == m || negz >= high ) { id |= 0x04; }
-                    if ( posx == m || posx >= high ) { id |= 0x08; }
+                    if ( negx == m || negx >= high ) { id |= 0x04; }
+                    if ( posz == m || posz >= high ) { id |= 0x08; }
                     if ( posy == m || posy >= high ) { id |= 0x10; }
-                    if ( posz == m || posz >= high ) { id |= 0x20; }
+                    if ( posx == m || posx >= high ) { id |= 0x20; }
                 }
             }
 
 
-    const std::ptrdiff_t dir[6] = { -1, -xdim, -xdim*ydim, 1, xdim, xdim*ydim };
+    const std::ptrdiff_t dir[6] = { -1, -zdim, -zdim*ydim, 1, zdim, zdim*ydim };
     const id_t dirmask[6]  = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20 };
     const id_t idirmask[6] = { 0x08, 0x10, 0x20, 0x01, 0x02, 0x04 };
 
