@@ -15,42 +15,32 @@ def zwatershed_unified(np.ndarray[np.float32_t, ndim=4] affs, threshes, np.ndarr
     cdef np.ndarray[uint64_t, ndim=3] segmentation
     cdef uint32_t*                    gt_data
 
-    print("Creating local copy of affinities...")
-
-    affs = np.asfortranarray(np.transpose(affs, (1, 2, 3, 0)))
-
     print("Preparing segmentation volumes...")
 
     segmentations = []
-    volume_shape = (affs.shape[0], affs.shape[1], affs.shape[2])
+    volume_shape = (affs.shape[1], affs.shape[2], affs.shape[3])
     threshes.sort()
     for i in range(len(threshes)):
         segmentation = np.zeros(volume_shape, dtype=np.uint64, order='F')
         segmentations.append(segmentation)
         segmentation_data.push_back(&segmentation[0,0,0])
 
+    print("Processing thresholds")
+
     if gt is not None:
 
-        print("Creating local copy of ground-truth...")
-
-        gt = np.array(gt, order='F')
         gt_data = &gt[0,0,0]
-
-        print("Processing thresholds")
-
         metrics = process_thresholds(
             threshes,
-            affs.shape[0], affs.shape[1], affs.shape[2],
+            affs.shape[1], affs.shape[2], affs.shape[3],
             &affs[0, 0, 0, 0],
             segmentation_data,
             gt_data)
         return (segmentations, metrics)
 
-    print("Processing thresholds")
-
     process_thresholds(
         threshes,
-        affs.shape[0], affs.shape[1], affs.shape[2],
+        affs.shape[1], affs.shape[2], affs.shape[3],
         &affs[0, 0, 0, 0],
         segmentation_data)
     return segmentations

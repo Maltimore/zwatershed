@@ -54,8 +54,7 @@ std::vector<Metrics> process_thresholds(
 	affinity_graph_ref_ptr<float> affinities(
 			new affinity_graph_ref<float>(
 					affinity_data,
-					boost::extents[width][height][depth][3],
-					boost::fortran_storage_order()
+					boost::extents[3][width][height][depth]
 			)
 	);
 
@@ -66,8 +65,7 @@ std::vector<Metrics> process_thresholds(
 		ground_truth = volume_ref_ptr<uint32_t>(
 				new volume_ref<uint32_t>(
 						ground_truth_data,
-						boost::extents[width][height][depth],
-						boost::fortran_storage_order()
+						boost::extents[width][height][depth]
 				)
 		);
 	}

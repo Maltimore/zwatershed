@@ -18,9 +18,9 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
     affinity_t low  = static_cast<affinity_t>(lowv);
     affinity_t high = static_cast<affinity_t>(highv);
 
-    std::ptrdiff_t xdim = aff_ptr->shape()[0];
-    std::ptrdiff_t ydim = aff_ptr->shape()[1];
-    std::ptrdiff_t zdim = aff_ptr->shape()[2];
+    std::ptrdiff_t xdim = aff_ptr->shape()[1];
+    std::ptrdiff_t ydim = aff_ptr->shape()[2];
+    std::ptrdiff_t zdim = aff_ptr->shape()[3];
 
     std::ptrdiff_t size = xdim * ydim * zdim;
 
@@ -43,12 +43,12 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
             {
                 id_t& id = seg[x][y][z] = 0;
 
-                F negx = (x>0) ? aff[x][y][z][0] : low;
-                F negy = (y>0) ? aff[x][y][z][1] : low;
-                F negz = (z>0) ? aff[x][y][z][2] : low;
-                F posx = (x<(xdim-1)) ? aff[x+1][y][z][0] : low;
-                F posy = (y<(ydim-1)) ? aff[x][y+1][z][1] : low;
-                F posz = (z<(zdim-1)) ? aff[x][y][z+1][2] : low;
+                F negx = (x>0) ? aff[0][x][y][z] : low;
+                F negy = (y>0) ? aff[1][x][y][z] : low;
+                F negz = (z>0) ? aff[2][x][y][z] : low;
+                F posx = (x<(xdim-1)) ? aff[0][x+1][y][z] : low;
+                F posy = (y<(ydim-1)) ? aff[1][x][y+1][z] : low;
+                F posz = (z<(zdim-1)) ? aff[2][x][y][z+1] : low;
 
                 F m = std::max({negx,negy,negz,posx,posy,posz});
 

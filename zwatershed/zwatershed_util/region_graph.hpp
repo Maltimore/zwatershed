@@ -15,9 +15,9 @@ get_region_graph( const AG_P& aff_ptr,
     typedef typename AG_P::element_type AG;
     typedef typename AG::element        F;
 
-    std::ptrdiff_t xdim = aff_ptr->shape()[0];
-    std::ptrdiff_t ydim = aff_ptr->shape()[1];
-    std::ptrdiff_t zdim = aff_ptr->shape()[2];
+    std::ptrdiff_t xdim = aff_ptr->shape()[1];
+    std::ptrdiff_t ydim = aff_ptr->shape()[2];
+    std::ptrdiff_t zdim = aff_ptr->shape()[3];
 
     volume<ID>& seg = *seg_ptr;
     auto& aff = *aff_ptr;
@@ -36,19 +36,19 @@ get_region_graph( const AG_P& aff_ptr,
                 {
                     auto mm = std::minmax(seg[x][y][z], seg[x-1][y][z]);
                     F& curr = edges[mm.first][mm.second];
-                    curr = std::max(curr, aff[x][y][z][0]);
+                    curr = std::max(curr, aff[0][x][y][z]);
                 }
                 if ( (y > 0) && seg[x][y][z] && seg[x][y-1][z] )
                 {
                     auto mm = std::minmax(seg[x][y][z], seg[x][y-1][z]);
                     F& curr = edges[mm.first][mm.second];
-                    curr = std::max(curr, aff[x][y][z][1]);
+                    curr = std::max(curr, aff[1][x][y][z]);
                 }
                 if ( (z > 0) && seg[x][y][z] && seg[x][y][z-1] )
                 {
                     auto mm = std::minmax(seg[x][y][z], seg[x][y][z-1]);
                     F& curr = edges[mm.first][mm.second];
-                    curr = std::max(curr, aff[x][y][z][2]);
+                    curr = std::max(curr, aff[2][x][y][z]);
                 }
             }
 
