@@ -106,12 +106,19 @@ cdef extern from "zwatershed.h":
         double rand_split
         double rand_merge
 
+    struct ZwatershedState:
+        pass
+
     vector[Metrics] process_thresholds(
             vector[size_t] thresholds,
             size_t width, size_t height, size_t depth,
             np.float32_t* affs,
             vector[uint64_t*]& segmentation_data,
             uint32_t* gt_data)
+
+    ZwatershedState get_initial_state(
+            size_t width, size_t height, size_t depth,
+            np.float32_t* affs)
 
 ####################
 # PREVIOUS METHODS #
@@ -135,15 +142,23 @@ def zwshed_with_stats_arb(np.ndarray[uint64_t, ndim=3] gt, np.ndarray[uint64_t, 
 
 def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NULL/"):
 
-    raise RuntimeError("This method is currently not adjusted to the new c-order C++ backend")
+    makedirs(seg_save_path)
+
+    # the C++ part assumes contiguous memory, make sure we have it (and do 
+    # nothing, if we do)
+    if not affs.flags['C_CONTIGUOUS']:
+        print("Creating memory-contiguous affinity arrray (avoid this by passing C_CONTIGUOUS arrays)")
+        affs = np.ascontiguousarray(affs)
+
+    state = get_initial_state(
+        affs.shape[1], affs.shape[2], affs.shape[3],
+        &affs[0,0,0,0])
 
     # NOTE:
     # Similar to zwatershed() above, this method needs to be adjusted for the 
     # c-order backend. In particular:
     # * handle affinities and ground-truth the same way
     # * return a region graph representation to store it in h5 file
-
-    #makedirs(seg_save_path)
 
     ## get initial seg,rg
     #affs = np.asfortranarray(np.transpose(affs, (1, 2, 3, 0)))

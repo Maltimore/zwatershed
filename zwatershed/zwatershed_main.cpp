@@ -25,7 +25,6 @@
 #include "zwatershed_util/region_graph.hpp"
 #include "zwatershed_util/basic_watershed.hpp"
 #include "zwatershed_util/limit_functions.hpp"
-#include "zwatershed_util/types.hpp"
 #include "zwatershed_util/main_helper.hpp"
 
 // arb funcs
@@ -50,14 +49,6 @@ std::vector<Metrics> process_thresholds(
 
 	assert(thresholds.size() == segmentation_data.size());
 
-	// wrap affinities (no copy)
-	affinity_graph_ref_ptr<float> affinities(
-			new affinity_graph_ref<float>(
-					affinity_data,
-					boost::extents[3][width][height][depth]
-			)
-	);
-
 	// wrap ground-truth (no copy)
 	volume_ref_ptr<uint32_t> ground_truth;
 	if (ground_truth_data != 0) {
@@ -70,14 +61,9 @@ std::vector<Metrics> process_thresholds(
 		);
 	}
 
-	std::cout << "performing initial watershed segmentation..." << std::endl;
-
-	volume_ptr<uint64_t> segmentation;
-	std::vector<size_t> counts;
-	std::tie(segmentation, counts) = watershed<uint64_t>(affinities, LOW, HIGH);
-
-	std::cout << "extracting region graph..." << std::endl;
-	region_graph_ptr<uint64_t, float> reg_graph = get_region_graph(affinities, segmentation, counts.size() - 1);
+	ZwatershedState state = get_initial_state(
+			width, height, depth,
+			affinity_data);
 
 	std::vector<Metrics> threshold_metrics;
 
@@ -87,22 +73,22 @@ std::vector<Metrics> process_thresholds(
 
 		std::cout << "merging until threshold " << threshold << std::endl;
 		merge_segments_with_function(
-				segmentation,
-				reg_graph,
-				counts,
+				state.segmentation,
+				state.region_graph,
+				*state.counts,
 				square((double)threshold),
 				10, // TODO: what is it?
 				RECREATE_RG
 		);
 
 		// make a copy of the current segmentation
-		std::copy(segmentation->data(), segmentation->data() + num_voxels, &segmentation_data[i][0]);
+		std::copy(state.segmentation->data(), state.segmentation->data() + num_voxels, &segmentation_data[i][0]);
 
 		if (ground_truth) {
 
 			std::cout << "evaluating current segmentation against ground-truth" << std::endl;
 
-			auto m = compare_volumes(*ground_truth, *segmentation, width, height, depth);
+			auto m = compare_volumes(*ground_truth, *(state.segmentation), width, height, depth);
 			Metrics metrics;
 			metrics.rand_split = std::get<0>(m);
 			metrics.rand_merge = std::get<1>(m);
@@ -116,6 +102,36 @@ std::vector<Metrics> process_thresholds(
 	return threshold_metrics;
 }
 
+ZwatershedState get_initial_state(
+		size_t width, size_t height, size_t depth,
+		const float* affinity_data) {
+
+	size_t num_voxels = width*height*depth;
+
+	// wrap affinities (no copy)
+	affinity_graph_ref_ptr<float> affinities(
+			new affinity_graph_ref<float>(
+					affinity_data,
+					boost::extents[3][width][height][depth]
+			)
+	);
+
+	std::cout << "performing initial watershed segmentation..." << std::endl;
+
+	volume_ptr<uint64_t> segmentation;
+	counts_ptr<size_t> counts;
+	std::tie(segmentation, counts) = watershed<uint64_t>(affinities, LOW, HIGH);
+
+	std::cout << "extracting region graph..." << std::endl;
+	region_graph_ptr<uint64_t, float> reg_graph = get_region_graph(affinities, segmentation, counts->size() - 1);
+
+	ZwatershedState initial_state;
+	initial_state.region_graph = reg_graph;
+	initial_state.segmentation = segmentation;
+	initial_state.counts = counts;
+
+	return initial_state;
+}
 
 
 /////////////////////////////////////////arb nhoods/////////////////////////////////////////
@@ -165,21 +181,21 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
     //read data
     volume_ptr<uint64_t> gt_ptr(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ], boost::c_storage_order() )); //, boost::fortran_storage_order()));
     volume_ptr<uint64_t> seg(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ], boost::c_storage_order()));
-    std::vector<std::size_t> counts = * new std::vector<std::size_t>();
+    counts_ptr<std::size_t> counts(new counts_t<std::size_t>());
     region_graph_ptr<uint64_t,float> rg( new region_graph<uint64_t,float> );
     for(size_t i=0;i<dimX*dimY*dimZ;i++){
         gt_ptr->data()[i] = gt[i];
         seg->data()[i] = seg_in[i];
     }
     for(size_t i=0;i<counts_len;i++)
-        counts.push_back(counts_in[i]);
+        counts->push_back(counts_in[i]);
     for(size_t i=0;i<rgn_graph_len;i++)
         (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
 
     // merge
     std::cout << "thresh: " << thresh << "\n";
     double t = (double) thresh;
-	merge_segments_with_function(seg, rg, counts, square(t), 10,RECREATE_RG);
+	merge_segments_with_function(seg, rg, *counts, square(t), 10,RECREATE_RG);
 
     // save
     std::map<std::string,std::vector<double>> returnMap;
@@ -197,7 +213,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
         rg_data.push_back(std::get<2>(e));
         rg_data.push_back(std::get<0>(e));
     }
-    for (const auto& x:counts)
+    for (const auto& x:*counts)
         counts_data.push_back(x);
     returnMap["seg"] = seg_vector;
     returnMap["stats"] = r;
@@ -212,20 +228,20 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
 
     //read data
     volume_ptr<uint64_t> seg(new volume<uint64_t> (boost::extents[dimX][dimY][dimZ]));
-    std::vector<std::size_t> counts = * new std::vector<std::size_t>();
+    counts_ptr<std::size_t> counts(new counts_t<std::size_t>());
     region_graph_ptr<uint64_t,float> rg( new region_graph<uint64_t,float> );
     for(size_t i=0;i<dimX*dimY*dimZ;i++){
         seg->data()[i] = seg_in[i];
     }
     for(size_t i=0;i<counts_len;i++)
-        counts.push_back(counts_in[i]);
+        counts->push_back(counts_in[i]);
     for(size_t i=0;i<rgn_graph_len;i++)
         (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
 
     // merge
     std::cout << "thresh: " << thresh << "\n";
     double t = (double) thresh;
-	merge_segments_with_function(seg, rg, counts, square(t), 10,RECREATE_RG);
+	merge_segments_with_function(seg, rg, *counts, square(t), 10,RECREATE_RG);
 
     // save
     std::map<std::string,std::vector<double>> returnMap;
@@ -240,7 +256,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
         rg_data.push_back(std::get<2>(e));
         rg_data.push_back(std::get<0>(e));
     }
-    for (const auto& x:counts)
+    for (const auto& x:*counts)
         counts_data.push_back(x);
     returnMap["seg"] = seg_vector;
     returnMap["rg"]=rg_data;

@@ -7,13 +7,13 @@
 #include <vector>
 #include <set>
 
-template< typename ID, typename F, typename FN, typename M >
+template< typename ID, typename F, typename FN>
 inline void merge_segments_with_function( const volume_ptr<ID>& seg_ptr,
                                           const region_graph_ptr<ID,F> rg_ptr,
-                                          std::vector<std::size_t>& counts,
+                                          counts_t<std::size_t>& counts,
                                           const FN& func,
-                                          const M& lowt,
-                                           bool recreate_rg)
+                                          size_t low,
+                                          bool recreate_rg)
 {
     zi::disjoint_sets<ID> sets(counts.size());
 
@@ -48,8 +48,6 @@ inline void merge_segments_with_function( const volume_ptr<ID>& seg_ptr,
     std::vector<ID> remaps(counts.size());
 
     ID next_id = 1;
-
-    std::size_t low = static_cast<std::size_t>(lowt);
 
     for ( ID id = 0; id < counts.size(); ++id )
     {

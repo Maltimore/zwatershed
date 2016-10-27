@@ -5,7 +5,7 @@
 #include <iostream>
 
 template< typename ID, typename AG_P, typename L, typename H >
-inline std::tuple< volume_ptr<ID>, std::vector<std::size_t> >
+inline std::tuple< volume_ptr<ID>, counts_ptr<std::size_t> >
 watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
 {
     typedef typename AG_P::element_type AG;
@@ -24,11 +24,11 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
 
     std::ptrdiff_t size = xdim * ydim * zdim;
 
-    std::tuple< volume_ptr<id_t>, std::vector<std::size_t> > result
+    std::tuple< volume_ptr<id_t>, counts_ptr<std::size_t> > result
         ( volume_ptr<id_t>( new volume<id_t>(boost::extents[zdim][ydim][xdim])),
-          std::vector<std::size_t>(1) );
+          counts_ptr<std::size_t>( new counts_t<std::size_t>(1)) );
 
-    auto& counts = std::get<1>(result);
+    auto& counts = *std::get<1>(result);
     counts[0] = 0;
 
     auto&         aff = *aff_ptr;

@@ -64,3 +64,9 @@ using region_graph = std::vector<std::tuple<F,ID,ID>>;
 
 template< typename ID, typename F >
 using region_graph_ptr = std::shared_ptr<region_graph<ID,F>>;
+
+template < typename T >
+using counts_t = std::vector<T>;
+
+template < typename T >
+using counts_ptr = std::shared_ptr<counts_t<T>>;

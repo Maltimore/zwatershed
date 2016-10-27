@@ -6,6 +6,8 @@
 #include <map>
 #include <vector>
 
+#include "zwatershed_util/types.hpp"
+
 struct RegionGraphEdge {
 
 	uint64_t id1;
@@ -26,12 +28,23 @@ struct Metrics {
 	double rand_merge;
 };
 
+struct ZwatershedState {
+
+	volume_ptr<uint64_t> segmentation;
+	counts_ptr<size_t> counts;
+	region_graph_ptr<uint64_t, float> region_graph;
+};
+
 std::vector<Metrics> process_thresholds(
 		const std::vector<size_t>& thresholds,
 		size_t width, size_t height, size_t depth,
 		const float* affinity_data,
 		const std::vector<uint64_t*>& segmentation_data,
 		const uint32_t* ground_truth_data = 0);
+
+ZwatershedState get_initial_state(
+		size_t width, size_t height, size_t depth,
+		const float* affinity_data);
 
 std::map<std::string,std::list<float>> zwshed_initial_c_arb(const size_t dx, const size_t dy, const size_t dz, const uint64_t*node1,
                                                const uint64_t*node2, const float*edgeWeight, const size_t n_edge);
