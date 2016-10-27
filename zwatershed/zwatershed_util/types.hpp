@@ -59,8 +59,22 @@ using affinity_graph_ptr = std::shared_ptr<affinity_graph<T>>;
 template < typename T >
 using affinity_graph_ref_ptr = std::shared_ptr<affinity_graph_ref<T>>;
 
+template < typename F, typename ID >
+struct region_graph_edge_t {
+
+	F weight;
+	ID id1;
+	ID id2;
+
+	region_graph_edge_t(F weight_, ID id1_, ID id2_) : weight(weight_), id1(id1_), id2(id2_) {}
+
+	bool operator>(const region_graph_edge_t<F, ID>& other) const {
+		return weight > other.weight;
+	}
+};
+
 template< typename ID, typename F >
-using region_graph = std::vector<std::tuple<F,ID,ID>>;
+using region_graph = std::vector<region_graph_edge_t<F, ID>>;
 
 template< typename ID, typename F >
 using region_graph_ptr = std::shared_ptr<region_graph<ID,F>>;

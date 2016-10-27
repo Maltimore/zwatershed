@@ -64,7 +64,7 @@ get_region_graph( const AG_P& aff_ptr,
     std::cout << "Region graph size: " << rg.size() << std::endl;
 
     std::stable_sort(std::begin(rg), std::end(rg),
-                     std::greater<std::tuple<F,ID,ID>>());
+                     std::greater<region_graph_edge_t<F,ID>>());
 
     return rg_ptr;
 }

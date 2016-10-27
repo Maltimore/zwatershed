@@ -8,18 +8,6 @@
 
 #include "zwatershed_util/types.hpp"
 
-struct RegionGraphEdge {
-
-	uint64_t id1;
-	uint64_t id2;
-};
-
-struct RegionGraph {
-
-	std::vector<RegionGraphEdge> edges;
-	std::vector<float>           weights;
-};
-
 struct Metrics {
 
 	double voi_split;

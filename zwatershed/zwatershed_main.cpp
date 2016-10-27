@@ -156,9 +156,10 @@ std::map<std::string,std::list<float>> zwshed_initial_c_arb(const size_t dimX, c
 
     std::list<float> rg_data = * (new std::list<float>());
     for ( const auto& e: *rg ){
-        rg_data.push_back(std::get<1>(e));
-        rg_data.push_back(std::get<2>(e));
-        rg_data.push_back(std::get<0>(e));
+		// TODO: unsafe cast from size_t to float
+        rg_data.push_back(e.id1);
+        rg_data.push_back(e.id2);
+        rg_data.push_back(e.weight);
     }
     std::list<float> seg_data = * (new std::list<float>());
     std::list<float> counts_data = * (new std::list<float>());
@@ -209,9 +210,10 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
     r.push_back(x.first);
     r.push_back(x.second);
     for ( const auto& e: *rg ){
-        rg_data.push_back(std::get<1>(e));
-        rg_data.push_back(std::get<2>(e));
-        rg_data.push_back(std::get<0>(e));
+		// TODO: unsafe cast from size_t to float
+        rg_data.push_back(e.id1);
+        rg_data.push_back(e.id2);
+        rg_data.push_back(e.weight);
     }
     for (const auto& x:*counts)
         counts_data.push_back(x);
@@ -252,9 +254,10 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
         seg_vector.push_back(((double)(seg->data()[i])));
 
     for ( const auto& e: *rg ){
-        rg_data.push_back(std::get<1>(e));
-        rg_data.push_back(std::get<2>(e));
-        rg_data.push_back(std::get<0>(e));
+		// TODO: unsafe cast from size_t to float
+        rg_data.push_back(e.id1);
+        rg_data.push_back(e.id2);
+        rg_data.push_back(e.weight);
     }
     for (const auto& x:*counts)
         counts_data.push_back(x);

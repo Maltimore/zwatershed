@@ -19,17 +19,17 @@ inline void merge_segments_with_function( const volume_ptr<ID>& seg_ptr,
 
     region_graph<ID,F>& rg  = *rg_ptr;
 
-    for ( auto& it: rg )
+    for ( auto& edge: rg )
     {
-        std::size_t size = func(std::get<0>(it));
+        std::size_t size = func(edge.weight);
 
         if ( size == 0 )
         {
             break;
         }
 
-        ID s1 = sets.find_set(std::get<1>(it));
-        ID s2 = sets.find_set(std::get<2>(it));
+        ID s1 = sets.find_set(edge.id1);
+        ID s2 = sets.find_set(edge.id2);
 
         // std::cout << s1 << " " << s2 << " " << size << "\n";
 
@@ -81,17 +81,17 @@ inline void merge_segments_with_function( const volume_ptr<ID>& seg_ptr,
 
     std::vector<std::set<ID>> in_rg(next_id);
 
-    for ( auto& it: rg )
+    for ( auto& edge: rg )
     {
-        ID s1 = remaps[sets.find_set(std::get<1>(it))];
-        ID s2 = remaps[sets.find_set(std::get<2>(it))];
+        ID s1 = remaps[sets.find_set(edge.id1)];
+        ID s2 = remaps[sets.find_set(edge.id2)];
 
         if ( s1 != s2 && s1 && s2 )
         {
             auto mm = std::minmax(s1,s2);
             if ( in_rg[mm.first].count(mm.second) == 0 )
             {
-                new_rg.push_back(std::make_tuple(std::get<0>(it), mm.first, mm.second));
+                new_rg.push_back(region_graph_edge_t<F,ID>(edge.weight, mm.first, mm.second));
                 in_rg[mm.first].insert(mm.second);
             }
         }
