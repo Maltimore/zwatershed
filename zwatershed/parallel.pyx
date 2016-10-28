@@ -45,13 +45,18 @@ def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NU
         print("Creating memory-contiguous affinity arrray (avoid this by passing C_CONTIGUOUS arrays)")
         affs = np.ascontiguousarray(affs)
 
+    cdef np.ndarray[uint64_t, ndim=3] segmentation
+    volume_shape = (affs.shape[1], affs.shape[2], affs.shape[3])
+    segmentation = np.zeros(volume_shape, dtype=np.uint64)
+
     state = get_initial_state(
         affs.shape[1], affs.shape[2], affs.shape[3],
-        &affs[0,0,0,0])
+        &affs[0,0,0,0],
+        &segmentation[0,0,0])
 
+    f = h5py.File(seg_save_path + 'basic.h5', 'w')
+    f["seg"] = segmentation
     # TODO: FIXME
-    #f = h5py.File(seg_save_path + 'basic.h5', 'w')
-    #f["seg"] = np.array(state.segmentation, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
     #f["counts"]=counts
     num_edges = state.region_graph.get().size()
     print("Region graph has " + str(num_edges) + " edges")
@@ -261,4 +266,5 @@ cdef extern from "c_frontend.h":
 
     ZwatershedState get_initial_state(
             size_t width, size_t height, size_t depth,
-            np.float32_t* affs)
+            np.float32_t* affs,
+            np.uint64_t* segmentation)

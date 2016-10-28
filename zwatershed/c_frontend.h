@@ -35,7 +35,7 @@ std::vector<Metrics> process_thresholds(
 ZwatershedState get_initial_state(
 		size_t width, size_t height, size_t depth,
 		const float* affinity_data,
-		uint64_t* segmentation_data = 0);
+		uint64_t* segmentation_data);
 
 std::map<std::string,std::list<float>> zwshed_initial_c_arb(const size_t dx, const size_t dy, const size_t dz, const uint64_t*node1,
                                                const uint64_t*node2, const float*edgeWeight, const size_t n_edge);

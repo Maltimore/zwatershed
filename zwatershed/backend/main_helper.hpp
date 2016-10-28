@@ -31,8 +31,8 @@ using namespace std;
 template <typename V1, typename V2>
 std::tuple<double,double,double,double>
 compare_volumes(
-                 V1& gt,
-                 V2& ws, size_t dimX, size_t dimY, size_t dimZ ){
+                 const V1& gt,
+                 const V2& ws, size_t dimX, size_t dimY, size_t dimZ ){
     double rand_split = 0;
     double rand_merge = 0;
 

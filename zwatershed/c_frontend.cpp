@@ -49,21 +49,10 @@ std::vector<Metrics> process_thresholds(
 
 	assert(thresholds.size() == segmentation_data.size());
 
-	// wrap ground-truth (no copy)
-	volume_const_ref_ptr<uint32_t> ground_truth;
-	if (ground_truth_data != 0) {
-
-		ground_truth = volume_const_ref_ptr<uint32_t>(
-				new volume_const_ref<uint32_t>(
-						ground_truth_data,
-						boost::extents[width][height][depth]
-				)
-		);
-	}
-
 	ZwatershedState state = get_initial_state(
 			width, height, depth,
-			affinity_data);
+			affinity_data,
+			segmentation_data[0]);
 
 	std::vector<Metrics> threshold_metrics;
 
@@ -71,9 +60,15 @@ std::vector<Metrics> process_thresholds(
 
 		size_t threshold = thresholds[i];
 
+		// wrap segmentation for current iteration (no copy)
+		volume_ref<uint64_t> current_segmentation(
+				segmentation_data[i],
+				boost::extents[width][height][depth]
+		);
+
 		std::cout << "merging until threshold " << threshold << std::endl;
 		merge_segments_with_function(
-				*state.segmentation,
+				current_segmentation,
 				state.region_graph,
 				*state.counts,
 				square((double)threshold),
@@ -81,14 +76,21 @@ std::vector<Metrics> process_thresholds(
 				RECREATE_RG
 		);
 
-		// make a copy of the current segmentation
-		std::copy(state.segmentation->data(), state.segmentation->data() + num_voxels, &segmentation_data[i][0]);
+		// make a copy of the current segmentation for the next iteration
+		if (i < segmentation_data.size() - 1)
+			std::copy(segmentation_data[i], segmentation_data[i] + num_voxels, segmentation_data[i+1]);
 
-		if (ground_truth) {
+		if (ground_truth_data != 0) {
 
 			std::cout << "evaluating current segmentation against ground-truth" << std::endl;
 
-			auto m = compare_volumes(*ground_truth, *(state.segmentation), width, height, depth);
+			// wrap ground-truth (no copy)
+			volume_const_ref<uint32_t> ground_truth(
+					ground_truth_data,
+					boost::extents[width][height][depth]
+			);
+
+			auto m = compare_volumes(ground_truth, current_segmentation, width, height, depth);
 			Metrics metrics;
 			metrics.rand_split = std::get<0>(m);
 			metrics.rand_merge = std::get<1>(m);
@@ -124,7 +126,7 @@ ZwatershedState get_initial_state(
 	);
 
 	// create counts data structure
-	counts_ptr<size_t> counts;
+	counts_ptr<size_t> counts(new counts_t<size_t>());
 
 	std::cout << "performing initial watershed segmentation..." << std::endl;
 
