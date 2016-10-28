@@ -72,6 +72,7 @@ struct region_graph_edge_t {
 	ID id1;
 	ID id2;
 
+	region_graph_edge_t() : weight(0), id1(0), id2(0) {}
 	region_graph_edge_t(F weight_, ID id1_, ID id2_) : weight(weight_), id1(id1_), id2(id2_) {}
 
 	bool operator>(const region_graph_edge_t<F, ID>& other) const {

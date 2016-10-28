@@ -1,3 +1,4 @@
+from cython.operator cimport dereference
 from itertools import product
 from libc.stdint cimport uint64_t
 from libcpp.memory cimport shared_ptr
@@ -37,6 +38,9 @@ def partition_subvols(pred_file,out_folder,max_len):
 
 def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NULL/"):
 
+    cdef np.ndarray[uint64_t, ndim=3] segmentation
+    cdef region_graph_edge_t[float,uint64_t] edge
+
     makedirs(seg_save_path)
 
     # the C++ part assumes contiguous memory, make sure we have it (and do 
@@ -45,25 +49,38 @@ def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NU
         print("Creating memory-contiguous affinity arrray (avoid this by passing C_CONTIGUOUS arrays)")
         affs = np.ascontiguousarray(affs)
 
-    cdef np.ndarray[uint64_t, ndim=3] segmentation
+    # allocate memory for the segmentation
     volume_shape = (affs.shape[1], affs.shape[2], affs.shape[3])
     segmentation = np.zeros(volume_shape, dtype=np.uint64)
 
+    # get the segmentation, along with the region graph and counts in state
     state = get_initial_state(
         affs.shape[1], affs.shape[2], affs.shape[3],
         &affs[0,0,0,0],
         &segmentation[0,0,0])
 
+    # store segmentation
     f = h5py.File(seg_save_path + 'basic.h5', 'w')
     f["seg"] = segmentation
-    # TODO: FIXME
-    #f["counts"]=counts
-    num_edges = state.region_graph.get().size()
-    print("Region graph has " + str(num_edges) + " edges")
-    #rg_edges = np.array(rg.edges, dtype=np.uint64)
-    #f["rg_edges"]=rg_edges.reshape(len(rg_edges)/2,2)
-    #f["rg_weights"]=np.array(rg.weights, dtype=np.float32)
-    #f.close()
+
+    # store counts
+    num_regions = dereference(state.counts).size()
+    print("Storing " + str(num_regions) + " regions")
+    counts_ds = f.create_dataset('counts', (num_regions,), dtype='uint64')
+    for i in range(num_regions):
+        counts_ds = dereference(state.counts)[i]
+
+    # store region graph
+    num_edges = dereference(state.region_graph).size()
+    print("Storing region graph with " + str(num_edges) + " edges")
+    edges_ds = f.create_dataset('rg_edges', (num_edges, 2), dtype='uint64')
+    weights_ds = f.create_dataset('rg_weights', (num_edges,), dtype='float32')
+    for i in range(num_edges):
+        edge = dereference(state.region_graph)[i]
+        edges_ds[i,0] = edge.id1
+        edges_ds[i,1] = edge.id2
+        weights_ds[i] = edge.weight
+    f.close()
 
 def makedirs(seg_save_path):
     if not seg_save_path.endswith("/"):
@@ -256,13 +273,14 @@ def merge_by_thresh(seg,seg_sizes,rg,thresh):
 
 cdef extern from "c_frontend.h":
 
-    struct RegionGraphEdge:
-        float weight
-        uint64_t id1
-        uint64_t id2
+    cdef cppclass region_graph_edge_t[F,ID]:
+        F weight
+        ID id1
+        ID id2
 
     struct ZwatershedState:
-        shared_ptr[vector[RegionGraphEdge]] region_graph
+        shared_ptr[vector[region_graph_edge_t[float,uint64_t]]] region_graph
+        shared_ptr[vector[size_t]]          counts
 
     ZwatershedState get_initial_state(
             size_t width, size_t height, size_t depth,
