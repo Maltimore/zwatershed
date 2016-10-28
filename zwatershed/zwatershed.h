@@ -8,6 +8,8 @@
 
 #include "zwatershed_util/types.hpp"
 
+using RegionGraphEdge = region_graph_edge_t<float, uint64_t>;
+
 struct Metrics {
 
 	double voi_split;
