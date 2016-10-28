@@ -50,11 +50,11 @@ std::vector<Metrics> process_thresholds(
 	assert(thresholds.size() == segmentation_data.size());
 
 	// wrap ground-truth (no copy)
-	volume_ref_ptr<uint32_t> ground_truth;
+	volume_const_ref_ptr<uint32_t> ground_truth;
 	if (ground_truth_data != 0) {
 
-		ground_truth = volume_ref_ptr<uint32_t>(
-				new volume_ref<uint32_t>(
+		ground_truth = volume_const_ref_ptr<uint32_t>(
+				new volume_const_ref<uint32_t>(
 						ground_truth_data,
 						boost::extents[width][height][depth]
 				)
@@ -73,7 +73,7 @@ std::vector<Metrics> process_thresholds(
 
 		std::cout << "merging until threshold " << threshold << std::endl;
 		merge_segments_with_function(
-				state.segmentation,
+				*state.segmentation,
 				state.region_graph,
 				*state.counts,
 				square((double)threshold),
@@ -104,26 +104,35 @@ std::vector<Metrics> process_thresholds(
 
 ZwatershedState get_initial_state(
 		size_t width, size_t height, size_t depth,
-		const float* affinity_data) {
+		const float* affinity_data,
+		uint64_t* segmentation_data) {
 
 	size_t num_voxels = width*height*depth;
 
 	// wrap affinities (no copy)
-	affinity_graph_ref_ptr<float> affinities(
-			new affinity_graph_ref<float>(
-					affinity_data,
-					boost::extents[3][width][height][depth]
+	affinity_graph_ref<float> affinities(
+			affinity_data,
+			boost::extents[3][width][height][depth]
+	);
+
+	// wrap segmentation array (no copy)
+	volume_ref_ptr<uint64_t> segmentation(
+			new volume_ref<uint64_t>(
+					segmentation_data,
+					boost::extents[width][height][depth]
 			)
 	);
 
+	// create counts data structure
+	counts_ptr<size_t> counts;
+
 	std::cout << "performing initial watershed segmentation..." << std::endl;
 
-	volume_ptr<uint64_t> segmentation;
-	counts_ptr<size_t> counts;
-	std::tie(segmentation, counts) = watershed<uint64_t>(affinities, LOW, HIGH);
+	watershed(affinities, LOW, HIGH, *segmentation, *counts);
 
 	std::cout << "extracting region graph..." << std::endl;
-	region_graph_ptr<uint64_t, float> reg_graph = get_region_graph(affinities, segmentation, counts->size() - 1);
+	region_graph_ptr<uint64_t, float> reg_graph(new region_graph<uint64_t, float>());
+	get_region_graph(affinities, *segmentation, counts->size() - 1, *reg_graph);
 
 	ZwatershedState initial_state;
 	initial_state.region_graph = reg_graph;
@@ -196,7 +205,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
     // merge
     std::cout << "thresh: " << thresh << "\n";
     double t = (double) thresh;
-	merge_segments_with_function(seg, rg, *counts, square(t), 10,RECREATE_RG);
+	merge_segments_with_function(*seg, rg, *counts, square(t), 10,RECREATE_RG);
 
     // save
     std::map<std::string,std::vector<double>> returnMap;
@@ -243,7 +252,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
     // merge
     std::cout << "thresh: " << thresh << "\n";
     double t = (double) thresh;
-	merge_segments_with_function(seg, rg, *counts, square(t), 10,RECREATE_RG);
+	merge_segments_with_function(*seg, rg, *counts, square(t), 10,RECREATE_RG);
 
     // save
     std::map<std::string,std::vector<double>> returnMap;

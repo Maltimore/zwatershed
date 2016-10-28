@@ -4,43 +4,57 @@
 
 #include <iostream>
 
-template< typename ID, typename AG_P, typename L, typename H >
-inline std::tuple< volume_ptr<ID>, counts_ptr<std::size_t> >
-watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
+/**
+ * Perform a watershed segmentation on an affinity graph.
+ *
+ * @param aff [in]
+ *              A multi-array holding the affinity graph with shape 
+ *              (3,depth,height,width).
+ * @param low [in]
+ * @param high [in]
+ * @param seg [out]
+ *              A reference to a segmentation multi-array that will be used to 
+ *              store the segmentation. The caller has to ensure it is of the 
+ *              correct shape (depth,height,width).
+ * @param counts [out]
+ *              A reference to a counts_t data structure that will be used to 
+ *              store the sizes of the found regions.
+ */
+template<typename AG, typename V>
+inline
+void
+watershed(
+        const AG& aff,
+        typename AG::element low,
+        typename AG::element high,
+        V& seg,
+        counts_t<std::size_t>& counts)
 {
-    typedef typename AG_P::element_type AG;
-    typedef typename AG::element        F;
+    typedef typename AG::element F;
+    typedef typename V::element  ID;
 
-    using affinity_t = F;
-    using id_t       = ID;
-    using traits     = watershed_traits<id_t>;
+    using traits = watershed_traits<ID>;
 
-    affinity_t low  = static_cast<affinity_t>(lowv);
-    affinity_t high = static_cast<affinity_t>(highv);
-
-    std::ptrdiff_t zdim = aff_ptr->shape()[1];
-    std::ptrdiff_t ydim = aff_ptr->shape()[2];
-    std::ptrdiff_t xdim = aff_ptr->shape()[3];
+    std::ptrdiff_t zdim = aff.shape()[1];
+    std::ptrdiff_t ydim = aff.shape()[2];
+    std::ptrdiff_t xdim = aff.shape()[3];
 
     std::ptrdiff_t size = xdim * ydim * zdim;
 
-    std::tuple< volume_ptr<id_t>, counts_ptr<std::size_t> > result
-        ( volume_ptr<id_t>( new volume<id_t>(boost::extents[zdim][ydim][xdim])),
-          counts_ptr<std::size_t>( new counts_t<std::size_t>(1)) );
+    assert(seg.shape()[0] == zdim);
+    assert(seg.shape()[1] == ydim);
+    assert(seg.shape()[2] == xdim);
 
-    auto& counts = *std::get<1>(result);
+    counts.resize(1);
     counts[0] = 0;
 
-    auto&         aff = *aff_ptr;
-    volume<id_t>& seg = *std::get<0>(result);
-
-    id_t* seg_raw = seg.data();
+    ID* seg_raw = seg.data();
 
     for ( std::ptrdiff_t z = 0; z < zdim; ++z )
         for ( std::ptrdiff_t y = 0; y < ydim; ++y )
             for ( std::ptrdiff_t x = 0; x < xdim; ++x )
             {
-                id_t& id = seg[z][y][x] = 0;
+                ID& id = seg[z][y][x] = 0;
 
                 F negz = (z>0) ? aff[0][z][y][x] : low;
                 F negy = (y>0) ? aff[1][z][y][x] : low;
@@ -63,10 +77,10 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
             }
 
 
-	//                              -z          -y     -x  +z         +y    +x
+    //                              -z          -y     -x  +z         +y    +x
     const std::ptrdiff_t dir[6] = { -ydim*xdim, -xdim, -1, ydim*xdim, xdim, 1 };
-    const id_t dirmask[6]  = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20 };
-    const id_t idirmask[6] = { 0x08, 0x10, 0x20, 0x01, 0x02, 0x04 };
+    const ID dirmask[6]  = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20 };
+    const ID idirmask[6] = { 0x08, 0x10, 0x20, 0x01, 0x02, 0x04 };
 
     // get plato corners
 
@@ -96,7 +110,7 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
     {
         std::ptrdiff_t idx = bfs[bfs_index];
 
-        id_t to_set = 0;
+        ID to_set = 0;
 
         for ( std::ptrdiff_t d = 0; d < 6; ++d )
         {
@@ -124,7 +138,7 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
 
     // main watershed logic
 
-    id_t next_id = 1;
+    ID next_id = 1;
 
     for ( std::ptrdiff_t idx = 0; idx < size; ++idx )
     {
@@ -192,6 +206,4 @@ watershed( const AG_P& aff_ptr, const L& lowv, const H& highv )
     {
         seg_raw[idx] &= traits::mask;
     }
-
-    return result;
 }

@@ -7,14 +7,18 @@
 #include <vector>
 #include <set>
 
-template< typename ID, typename F, typename FN>
-inline void merge_segments_with_function( const volume_ptr<ID>& seg_ptr,
-                                          const region_graph_ptr<ID,F> rg_ptr,
-                                          counts_t<std::size_t>& counts,
-                                          const FN& func,
-                                          size_t low,
-                                          bool recreate_rg)
+template<typename V, typename F, typename FN>
+inline void
+merge_segments_with_function(
+        V& seg,
+        const region_graph_ptr<typename V::element, F> rg_ptr,
+        counts_t<std::size_t>& counts,
+        const FN& func,
+        size_t low,
+        bool recreate_rg)
 {
+    typedef typename V::element ID;
+
     zi::disjoint_sets<ID> sets(counts.size());
 
     region_graph<ID,F>& rg  = *rg_ptr;
@@ -62,13 +66,13 @@ inline void merge_segments_with_function( const volume_ptr<ID>& seg_ptr,
 
     counts.resize(next_id);
 
-    std::ptrdiff_t xdim = seg_ptr->shape()[0];
-    std::ptrdiff_t ydim = seg_ptr->shape()[1];
-    std::ptrdiff_t zdim = seg_ptr->shape()[2];
+    std::ptrdiff_t xdim = seg.shape()[0];
+    std::ptrdiff_t ydim = seg.shape()[1];
+    std::ptrdiff_t zdim = seg.shape()[2];
 
     std::ptrdiff_t total = xdim * ydim * zdim;
 
-    ID* seg_raw = seg_ptr->data();
+    ID* seg_raw = seg.data();
 
     for ( std::ptrdiff_t idx = 0; idx < total; ++idx )
     {

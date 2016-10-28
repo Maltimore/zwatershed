@@ -6,25 +6,33 @@
 #include <iostream>
 #include <map>
 
-template< typename ID, typename AG_P >
-inline region_graph_ptr<ID,typename AG_P::element_type::element>
-get_region_graph( const AG_P& aff_ptr,
-                  const volume_ptr<ID> seg_ptr,
-                  std::size_t max_segid)
+/**
+ * Extract the region graph from a segmentation. Edges are annotated with the 
+ * maximum affinity between the regions.
+ *
+ * @param aff [in]
+ *              The affinity graph to read the affinities from.
+ * @param seg [in]
+ *              The segmentation.
+ * @param max_segid [in]
+ *              The highest ID in the segmentation.
+ * @param region_graph [out]
+ *              A reference to a region graph to store the result.
+ */
+template<typename AG, typename V>
+inline
+void
+get_region_graph( const AG& aff,
+                  const V& seg,
+                  std::size_t max_segid,
+                  region_graph<typename V::element, typename AG::element>& rg)
 {
-    typedef typename AG_P::element_type AG;
     typedef typename AG::element        F;
+    typedef typename V::element         ID;
 
-    std::ptrdiff_t zdim = aff_ptr->shape()[1];
-    std::ptrdiff_t ydim = aff_ptr->shape()[2];
-    std::ptrdiff_t xdim = aff_ptr->shape()[3];
-
-    volume<ID>& seg = *seg_ptr;
-    auto& aff = *aff_ptr;
-
-    region_graph_ptr<ID,F> rg_ptr( new region_graph<ID,F> );
-
-    region_graph<ID,F>& rg = *rg_ptr;
+    std::ptrdiff_t zdim = aff.shape()[1];
+    std::ptrdiff_t ydim = aff.shape()[2];
+    std::ptrdiff_t xdim = aff.shape()[3];
 
     std::vector<std::map<ID,F>> edges(max_segid+1);
 
@@ -65,6 +73,4 @@ get_region_graph( const AG_P& aff_ptr,
 
     std::stable_sort(std::begin(rg), std::end(rg),
                      std::greater<region_graph_edge_t<F,ID>>());
-
-    return rg_ptr;
 }
