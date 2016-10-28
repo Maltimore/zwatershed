@@ -1,10 +1,8 @@
 from libcpp.vector cimport vector
-from libcpp.memory cimport shared_ptr
 from libc.stdint cimport uint64_t, uint32_t
 import os
 import numpy as np
 cimport numpy as np
-import h5py
 
 def zwatershed(np.ndarray[np.float32_t, ndim=4] affs, thresholds, np.ndarray[uint32_t, ndim=3] gt = None):
     '''
@@ -100,7 +98,7 @@ def zwatershed(np.ndarray[np.float32_t, ndim=4] affs, thresholds, np.ndarray[uin
         return (segmentations, stats)
     return segmentations
 
-cdef extern from "zwatershed.h":
+cdef extern from "c_frontend.h":
 
     struct Metrics:
         double voi_split
@@ -108,24 +106,12 @@ cdef extern from "zwatershed.h":
         double rand_split
         double rand_merge
 
-    struct RegionGraphEdge:
-        float weight
-        uint64_t id1
-        uint64_t id2
-
-    struct ZwatershedState:
-        shared_ptr[vector[RegionGraphEdge]] region_graph
-
     vector[Metrics] process_thresholds(
             vector[size_t] thresholds,
             size_t width, size_t height, size_t depth,
             np.float32_t* affs,
             vector[uint64_t*]& segmentation_data,
             uint32_t* gt_data)
-
-    ZwatershedState get_initial_state(
-            size_t width, size_t height, size_t depth,
-            np.float32_t* affs)
 
 ####################
 # PREVIOUS METHODS #
@@ -146,33 +132,3 @@ def zwshed_with_stats_arb(np.ndarray[uint64_t, ndim=3] gt, np.ndarray[uint64_t, 
     # * remove h5 support (delegated to user), remove relevant args
     # * rename to 'zwatershed_arb'
     # * write documentation
-
-def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NULL/"):
-
-    makedirs(seg_save_path)
-
-    # the C++ part assumes contiguous memory, make sure we have it (and do 
-    # nothing, if we do)
-    if not affs.flags['C_CONTIGUOUS']:
-        print("Creating memory-contiguous affinity arrray (avoid this by passing C_CONTIGUOUS arrays)")
-        affs = np.ascontiguousarray(affs)
-
-    state = get_initial_state(
-        affs.shape[1], affs.shape[2], affs.shape[3],
-        &affs[0,0,0,0])
-
-    f = h5py.File(seg_save_path + 'basic.h5', 'w')
-    #f["seg"] = np.array(state.segmentation, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
-    #f["counts"]=counts
-    num_edges = state.region_graph.get().size()
-    print("Region graph has " + str(num_edges) + " edges")
-    #rg_edges = np.array(rg.edges, dtype=np.uint64)
-    #f["rg_edges"]=rg_edges.reshape(len(rg_edges)/2,2)
-    #f["rg_weights"]=np.array(rg.weights, dtype=np.float32)
-    #f.close()
-
-def makedirs(seg_save_path):
-    if not seg_save_path.endswith("/"):
-        seg_save_path += "/"
-    if not os.path.exists(seg_save_path):
-        os.makedirs(seg_save_path)

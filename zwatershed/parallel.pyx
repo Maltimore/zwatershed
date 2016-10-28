@@ -1,8 +1,11 @@
-import numpy as np
-import h5py
-from zwatershed import *
-import os.path as op
 from itertools import product
+from libc.stdint cimport uint64_t
+from libcpp.memory cimport shared_ptr
+from libcpp.vector cimport vector
+import h5py
+import numpy as np
+cimport numpy as np
+import os
 
 ######################      partition subvols     ######################
 
@@ -32,6 +35,37 @@ def partition_subvols(pred_file,out_folder,max_len):
     
 ######################      call watershed     ######################
 
+def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NULL/"):
+
+    makedirs(seg_save_path)
+
+    # the C++ part assumes contiguous memory, make sure we have it (and do 
+    # nothing, if we do)
+    if not affs.flags['C_CONTIGUOUS']:
+        print("Creating memory-contiguous affinity arrray (avoid this by passing C_CONTIGUOUS arrays)")
+        affs = np.ascontiguousarray(affs)
+
+    state = get_initial_state(
+        affs.shape[1], affs.shape[2], affs.shape[3],
+        &affs[0,0,0,0])
+
+    # TODO: FIXME
+    #f = h5py.File(seg_save_path + 'basic.h5', 'w')
+    #f["seg"] = np.array(state.segmentation, dtype='uint64').reshape((dims[2], dims[1], dims[0])).transpose(2, 1, 0)
+    #f["counts"]=counts
+    num_edges = state.region_graph.get().size()
+    print("Region graph has " + str(num_edges) + " edges")
+    #rg_edges = np.array(rg.edges, dtype=np.uint64)
+    #f["rg_edges"]=rg_edges.reshape(len(rg_edges)/2,2)
+    #f["rg_weights"]=np.array(rg.weights, dtype=np.float32)
+    #f.close()
+
+def makedirs(seg_save_path):
+    if not seg_save_path.endswith("/"):
+        seg_save_path += "/"
+    if not os.path.exists(seg_save_path):
+        os.makedirs(seg_save_path)
+
 def zwshed_h5_par(arg):
     (pred_file,s,e,seg_save_path) = arg
     f = h5py.File(pred_file, 'r')
@@ -60,7 +94,7 @@ def stitch_and_save(partition_data,outname):
     (X,Y,Z) = num_vols #(1,1,2) # num_vols
     if not outname.endswith('.h5'):
         outname += '.h5'
-    if op.isfile(outname):
+    if os.path.isfile(outname):
         os.remove(outname)
     f = h5py.File(outname, 'a')
     dset_seg = f.create_dataset('seg', dims, dtype='uint64', chunks=True)
@@ -214,3 +248,17 @@ def merge_by_thresh(seg,seg_sizes,rg,thresh):
     mp[re_filtered.keys()] = re_filtered.values()
     seg = mp[seg]
     return seg
+
+cdef extern from "c_frontend.h":
+
+    struct RegionGraphEdge:
+        float weight
+        uint64_t id1
+        uint64_t id2
+
+    struct ZwatershedState:
+        shared_ptr[vector[RegionGraphEdge]] region_graph
+
+    ZwatershedState get_initial_state(
+            size_t width, size_t height, size_t depth,
+            np.float32_t* affs)

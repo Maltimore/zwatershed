@@ -20,17 +20,17 @@
 #include <string>
 
 //#pragma once
-#include "zwatershed.h"
-#include "zwatershed_util/agglomeration.hpp"
-#include "zwatershed_util/region_graph.hpp"
-#include "zwatershed_util/basic_watershed.hpp"
-#include "zwatershed_util/limit_functions.hpp"
-#include "zwatershed_util/main_helper.hpp"
+#include "c_frontend.h"
+#include "backend/agglomeration.hpp"
+#include "backend/region_graph.hpp"
+#include "backend/basic_watershed.hpp"
+#include "backend/limit_functions.hpp"
+#include "backend/main_helper.hpp"
 
 // arb funcs
-#include "zwatershed_util/region_graph_arb.hpp"
-#include "zwatershed_util/basic_watershed_arb.hpp"
-#include "zwatershed_util/main_helper_arb.hpp"
+#include "backend/region_graph_arb.hpp"
+#include "backend/basic_watershed_arb.hpp"
+#include "backend/main_helper_arb.hpp"
 
 using namespace std;
 // these values based on 5% at iter = 10000

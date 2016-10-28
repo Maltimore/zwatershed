@@ -5,3 +5,6 @@ dist
 build
 *checkpoints*
 *.nfs
+*.sw[pmno]
+zwatershed/frontend.cpp
+zwatershed/parallel.cpp
