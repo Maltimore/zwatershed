@@ -39,7 +39,7 @@ def partition_subvols(pred_file,out_folder,max_len):
 def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NULL/"):
 
     cdef np.ndarray[uint64_t, ndim=3] segmentation
-    cdef region_graph_edge_t[float,uint64_t] edge
+    cdef RegionGraphEdge[uint64_t,float] edge
 
     makedirs(seg_save_path)
 
@@ -79,7 +79,7 @@ def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NU
         edge = dereference(state.region_graph)[i]
         edges_ds[i,0] = edge.id1
         edges_ds[i,1] = edge.id2
-        weights_ds[i] = edge.weight
+        weights_ds[i] = edge.affinity
     f.close()
 
 def makedirs(seg_save_path):
@@ -273,13 +273,13 @@ def merge_by_thresh(seg,seg_sizes,rg,thresh):
 
 cdef extern from "c_frontend.h":
 
-    cdef cppclass region_graph_edge_t[F,ID]:
-        F weight
+    cdef cppclass RegionGraphEdge[ID,F]:
         ID id1
         ID id2
+        F affinity
 
     struct ZwatershedState:
-        shared_ptr[vector[region_graph_edge_t[float,uint64_t]]] region_graph
+        shared_ptr[vector[RegionGraphEdge[uint64_t,float]]] region_graph
         shared_ptr[vector[size_t]]          counts
 
     ZwatershedState get_initial_state(

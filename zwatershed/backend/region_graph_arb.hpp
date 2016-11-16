@@ -33,7 +33,7 @@ get_region_graph_arb( //const affinity_graph_ptr<F>& aff_ptr,
             rg.emplace_back(p.second, id1, p.first);
 
 
-    std::stable_sort(std::begin(rg), std::end(rg), std::greater<region_graph_edge_t<F,ID>>());
+    std::stable_sort(std::begin(rg), std::end(rg), std::greater<RegionGraphEdge<ID,F>>());
 
 
     return rg_ptr;

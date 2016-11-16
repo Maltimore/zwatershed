@@ -170,7 +170,7 @@ std::map<std::string,std::list<float>> zwshed_initial_c_arb(const size_t dimX, c
 		// TODO: unsafe cast from size_t to float
         rg_data.push_back(e.id1);
         rg_data.push_back(e.id2);
-        rg_data.push_back(e.weight);
+        rg_data.push_back(e.affinity);
     }
     std::list<float> seg_data = * (new std::list<float>());
     std::list<float> counts_data = * (new std::list<float>());
@@ -224,7 +224,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
 		// TODO: unsafe cast from size_t to float
         rg_data.push_back(e.id1);
         rg_data.push_back(e.id2);
-        rg_data.push_back(e.weight);
+        rg_data.push_back(e.affinity);
     }
     for (const auto& x:*counts)
         counts_data.push_back(x);
@@ -268,7 +268,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
 		// TODO: unsafe cast from size_t to float
         rg_data.push_back(e.id1);
         rg_data.push_back(e.id2);
-        rg_data.push_back(e.weight);
+        rg_data.push_back(e.affinity);
     }
     for (const auto& x:*counts)
         counts_data.push_back(x);

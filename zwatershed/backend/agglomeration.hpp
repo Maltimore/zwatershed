@@ -41,7 +41,7 @@ merge_segments_with_function(
     {
 		// "size" is actually the merge score
 		// "weight" is probably the affinity?
-        std::size_t size = func(edge.weight);
+        std::size_t size = func(edge.affinity);
 
 		// we don't merge 0 scores? why?
         if ( size == 0 )
@@ -163,7 +163,7 @@ merge_segments_with_function(
 				// add a new edge
 				// FIXME: edge weight is just the first score ever encountered! 
 				// neither the max or average or whatever!
-                new_rg.push_back(region_graph_edge_t<F,ID>(edge.weight, mm.first, mm.second));
+                new_rg.push_back(RegionGraphEdge<ID,F>(edge.affinity, mm.first, mm.second));
                 in_rg[mm.first].insert(mm.second);
             }
         }

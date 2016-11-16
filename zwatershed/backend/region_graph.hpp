@@ -72,5 +72,5 @@ get_region_graph( const AG& aff,
     std::cout << "Region graph size: " << rg.size() << std::endl;
 
     std::stable_sort(std::begin(rg), std::end(rg),
-                     std::greater<region_graph_edge_t<F,ID>>());
+                     std::greater<RegionGraphEdge<ID,F>>());
 }
