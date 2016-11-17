@@ -19,9 +19,9 @@ struct Metrics {
 struct ZwatershedState {
 
 	volume_ref_ptr<uint64_t> segmentation;
-	counts_ptr<size_t> counts;
 	std::shared_ptr<RegionGraph<uint64_t>> region_graph;
 	std::shared_ptr<typename RegionGraph<uint64_t>::template EdgeMap<float>> edge_affinities;
+	std::shared_ptr<typename RegionGraph<uint64_t>::template NodeMap<size_t>> region_sizes;
 };
 
 std::vector<Metrics> process_thresholds(

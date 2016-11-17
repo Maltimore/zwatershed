@@ -21,11 +21,78 @@ template <typename ID>
 class RegionGraph;
 
 template<typename ID>
-class RegionGraphEdgeMapBase {
+class RegionGraphNodeMapBase {
+
+public:
+
+	typedef RegionGraph<ID> RegionGraphType;
+
+	RegionGraphType& getRegionGraph() { return _regionGraph; }
 
 protected:
 
-	RegionGraphEdgeMapBase(RegionGraph<ID>& regionGraph) :
+	RegionGraphNodeMapBase(RegionGraphType& regionGraph) :
+		_regionGraph(regionGraph) {
+
+		_regionGraph.registerNodeMap(this);
+	}
+
+	virtual ~RegionGraphNodeMapBase() {
+
+		_regionGraph.deregisterNodeMap(this);
+	}
+
+private:
+
+	friend RegionGraphType;
+
+	virtual void onNewNode(ID id) = 0;
+
+	RegionGraphType& _regionGraph;
+};
+
+template<typename ID, typename T, typename Container>
+class RegionGraphNodeMap : public RegionGraphNodeMapBase<ID> {
+
+public:
+
+	typedef T ValueType;
+
+	typedef RegionGraph<ID> RegionGraphType;
+
+	RegionGraphNodeMap(RegionGraphType& regionGraph) :
+		RegionGraphNodeMapBase<ID>(regionGraph),
+		_values(regionGraph.numNodes()) {}
+
+	RegionGraphNodeMap(RegionGraphType& regionGraph, Container&& values) :
+		RegionGraphNodeMapBase<ID>(regionGraph),
+		_values(std::move(values)) {}
+
+	inline const T& operator[](ID i) const { return _values[i]; }
+	inline T& operator[](ID i) { return _values[i]; }
+
+private:
+
+	void onNewNode(ID id) {
+
+		_values.emplace_back();
+	}
+
+	Container _values;
+};
+
+template<typename ID>
+class RegionGraphEdgeMapBase {
+
+public:
+
+	typedef RegionGraph<ID> RegionGraphType;
+
+	RegionGraphType& getRegionGraph() { return _regionGraph; }
+
+protected:
+
+	RegionGraphEdgeMapBase(RegionGraphType& regionGraph) :
 		_regionGraph(regionGraph) {
 
 		_regionGraph.registerEdgeMap(this);
@@ -38,11 +105,11 @@ protected:
 
 private:
 
-	friend RegionGraph<ID>;
+	friend RegionGraphType;
 
 	virtual void onNewEdge(std::size_t id) = 0;
 
-	RegionGraph<ID>& _regionGraph;
+	RegionGraphType& _regionGraph;
 };
 
 template<typename ID, typename T, typename Container>
@@ -50,7 +117,11 @@ class RegionGraphEdgeMap : public RegionGraphEdgeMapBase<ID> {
 
 public:
 
-	RegionGraphEdgeMap(RegionGraph<ID>& regionGraph) :
+	typedef T ValueType;
+
+	typedef RegionGraph<ID> RegionGraphType;
+
+	RegionGraphEdgeMap(RegionGraphType& regionGraph) :
 		RegionGraphEdgeMapBase<ID>(regionGraph),
 		_values(regionGraph.edges().size()) {}
 
@@ -78,6 +149,9 @@ public:
 	typedef RegionGraphEdge<NodeIdType> EdgeType;
 
 	template <typename T, typename Container = std::vector<T>>
+	using NodeMap = RegionGraphNodeMap<ID, T, Container>;
+
+	template <typename T, typename Container = std::vector<T>>
 	using EdgeMap = RegionGraphEdgeMap<ID, T, Container>;
 
 	static const EdgeIdType NoEdge = std::numeric_limits<EdgeIdType>::max();
@@ -86,12 +160,16 @@ public:
 		_numNodes(numNodes),
 		_incEdges(numNodes) {}
 
+	ID numNodes() const { return _numNodes; }
+
 	ID addNode() {
 
 		NodeIdType id = _numNodes;
 		_numNodes++;
-
 		_incEdges.emplace_back();
+
+		for (RegionGraphNodeMapBase<ID>* map : _nodeMaps)
+			map->onNewNode(id);
 
 		return id;
 	}
@@ -147,7 +225,20 @@ public:
 
 private:
 
+	friend RegionGraphNodeMapBase<ID>;
 	friend RegionGraphEdgeMapBase<ID>;
+
+	void registerNodeMap(RegionGraphNodeMapBase<ID>* nodeMap) {
+
+		_nodeMaps.push_back(nodeMap);
+	}
+
+	void deregisterNodeMap(RegionGraphNodeMapBase<ID>* nodeMap) {
+
+		auto it = std::find(_nodeMaps.begin(), _nodeMaps.end(), nodeMap);
+		if (it != _nodeMaps.end())
+			_nodeMaps.erase(it);
+	}
 
 	void registerEdgeMap(RegionGraphEdgeMapBase<ID>* edgeMap) {
 
@@ -167,6 +258,7 @@ private:
 
 	std::vector<std::vector<EdgeIdType>> _incEdges;
 
+	std::vector<RegionGraphNodeMapBase<ID>*> _nodeMaps;
 	std::vector<RegionGraphEdgeMapBase<ID>*> _edgeMaps;
 };
 

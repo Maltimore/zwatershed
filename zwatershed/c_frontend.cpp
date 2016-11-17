@@ -35,6 +35,8 @@ double LOW=  .0001;
 double HIGH= .9999;
 bool RECREATE_RG = true;
 
+typedef RegionGraph<uint64_t> RegionGraphType;
+
 std::vector<Metrics> process_thresholds(
 		const std::vector<float>& thresholds,
 		size_t width, size_t height, size_t depth,
@@ -54,7 +56,26 @@ std::vector<Metrics> process_thresholds(
 	std::vector<Metrics> threshold_metrics;
 
 	IterativeRegionMerging<uint64_t, float> regionMerging(*state.region_graph);
-	MedianAffinity<uint64_t, float> mergeFunction(*state.region_graph, *state.edge_affinities);
+
+	//MedianAffinity<uint64_t, float> mergeFunctionAffinities(*state.region_graph, *state.edge_affinities);
+
+	MaxAffinity<RegionGraphType::EdgeMap<float>> mergeFunctionAffinities(*state.edge_affinities);
+	MinSize<RegionGraphType::NodeMap<std::size_t>> mergeFunctionRegionSize(*state.region_sizes);
+
+	//auto mergeFunction = oneMinus(square(mergeFunctionAffinities));
+	//auto mergeFunction = divide(
+			//mergeFunctionRegionSize,
+			//square(
+					//mergeFunctionAffinities
+			//)
+	//);
+	//auto mergeFunction = multiply(
+			//oneMinus(
+					//mergeFunctionAffinities
+			//),
+			//mergeFunctionRegionSize
+	//);
+	auto mergeFunction = oneMinus(mergeFunctionAffinities);
 
 	for (int i = 0; i < thresholds.size(); i++) {
 
@@ -124,29 +145,38 @@ ZwatershedState get_initial_state(
 			)
 	);
 
-	// create counts data structure
-	counts_ptr<size_t> counts(new counts_t<size_t>());
-
 	std::cout << "performing initial watershed segmentation..." << std::endl;
 
-	watershed(affinities, LOW, HIGH, *segmentation, *counts);
+	counts_t<size_t> counts;
+	watershed(affinities, LOW, HIGH, *segmentation, counts);
+
+	std::size_t numNodes = counts.size();
+
+	std::cout << "creating region graph for " << numNodes << " nodes" << std::endl;
+
+	std::shared_ptr<RegionGraphType> regionGraph(
+			new RegionGraphType(numNodes)
+	);
+
+	std::cout << "creating edge affinity map" << std::endl;
+
+	std::shared_ptr<RegionGraphType::EdgeMap<float>> edgeAffinities(
+			new RegionGraphType::EdgeMap<float>(*regionGraph)
+	);
+
+	std::cout << "creating region size map" << std::endl;
+
+	// create region size node map, desctruct counts
+	std::shared_ptr<RegionGraphType::NodeMap<size_t>> regionSizes(
+			new RegionGraphType::NodeMap<size_t>(*regionGraph, std::move(counts))
+	);
 
 	std::cout << "extracting region graph..." << std::endl;
-
-	std::size_t numNodes = counts->size();
-
-	std::shared_ptr<RegionGraph<uint64_t>> regionGraph(
-			new RegionGraph<uint64_t>(numNodes)
-	);
-
-	std::shared_ptr<RegionGraph<uint64_t>::EdgeMap<float>> edgeAffinities(
-			new RegionGraph<uint64_t>::EdgeMap<float>(*regionGraph)
-	);
 
 	get_region_graph(
 			affinities,
 			*segmentation,
-			counts->size() - 1,
+			numNodes - 1,
 			*regionGraph,
 			*edgeAffinities);
 
@@ -154,7 +184,7 @@ ZwatershedState get_initial_state(
 	initial_state.region_graph = regionGraph;
 	initial_state.edge_affinities = edgeAffinities;
 	initial_state.segmentation = segmentation;
-	initial_state.counts = counts;
+	initial_state.region_sizes = regionSizes;
 
 	return initial_state;
 }

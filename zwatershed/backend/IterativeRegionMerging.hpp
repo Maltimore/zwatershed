@@ -117,6 +117,8 @@ private:
 		// create a new node c = a + b
 		NodeIdType c = _regionGraph.addNode();
 
+		edgeScoringFunction.notifyNodeMerge(a, b, c);
+
 		// set parents
 		_rootPaths[a] = c;
 		_rootPaths[b] = c;
@@ -215,8 +217,6 @@ private:
 
 	// current state of merging
 	ScoreType _mergedUntil;
-
-	NodeIdType _nextNodeId;
 };
 
 #endif // ITERATIVE_REGION_MERGING_H__

@@ -1,33 +1,114 @@
 #ifndef MERGE_FUNCTIONS_H__
 #define MERGE_FUNCTIONS_H__
 
+#include "Operators.hpp"
+
 /**
- * Scores edges with 1 - median affinity.
+ * Scores edges with min size of incident regions.
  */
-template <typename NodeIdType, typename AffinityType>
-class MedianAffinity {
+template <typename SizeMapType>
+class MinSize {
 
 public:
 
-	typedef RegionGraph<NodeIdType>                                  RegionGraphType;
-	typedef typename RegionGraphType::template EdgeMap<AffinityType> AffinityMapType;
-	typedef typename RegionGraphType::EdgeIdType                     EdgeIdType;
+	typedef typename SizeMapType::RegionGraphType RegionGraphType;
+	typedef typename SizeMapType::ValueType       ScoreType;
+	typedef typename RegionGraphType::NodeIdType  NodeIdType;
+	typedef typename RegionGraphType::EdgeIdType  EdgeIdType;
 
-	MedianAffinity(RegionGraphType& regionGraph, const AffinityMapType& affinities) :
-		_affinities(affinities),
-		_affiliatedEdges(regionGraph) {}
+	MinSize(SizeMapType& regionSizes) :
+		_regionGraph(regionSizes.getRegionGraph()),
+		_regionSizes(regionSizes) {}
 
 	/**
 	 * Get the score for an edge. An edge will be merged the earlier, the 
 	 * smaller its score is.
 	 */
-	AffinityType operator()(EdgeIdType e) {
+	inline ScoreType operator()(EdgeIdType e) {
+
+		return std::min(
+				_regionSizes[_regionGraph.edge(e).u],
+				_regionSizes[_regionGraph.edge(e).v]);
+	}
+
+	inline void notifyNodeMerge(NodeIdType a, NodeIdType b, NodeIdType target) {
+
+		_regionSizes[target] = _regionSizes[a] + _regionSizes[b];
+	}
+
+	inline void notifyEdgeMerge(EdgeIdType from, EdgeIdType to) {}
+
+private:
+
+	const RegionGraphType& _regionGraph;
+	SizeMapType&           _regionSizes;
+};
+
+/**
+ * Scores edges with max affinity.
+ */
+template <typename AffinityMapType>
+class MaxAffinity {
+
+public:
+
+	typedef typename AffinityMapType::RegionGraphType RegionGraphType;
+	typedef typename AffinityMapType::ValueType       ScoreType;
+	typedef typename RegionGraphType::NodeIdType      NodeIdType;
+	typedef typename RegionGraphType::EdgeIdType      EdgeIdType;
+
+	MaxAffinity(AffinityMapType& affinities) :
+		_affinities(affinities) {}
+
+	/**
+	 * Get the score for an edge. An edge will be merged the earlier, the 
+	 * smaller its score is.
+	 */
+	inline ScoreType operator()(EdgeIdType e) {
+
+		return _affinities[e];
+	}
+
+	void notifyNodeMerge(NodeIdType a, NodeIdType b, NodeIdType target) {}
+
+	inline void notifyEdgeMerge(EdgeIdType from, EdgeIdType to) {
+
+		_affinities[to] = std::max(_affinities[to], _affinities[from]);
+	}
+
+private:
+
+	AffinityMapType& _affinities;
+};
+
+/**
+ * Scores edges with median affinity.
+ */
+template <typename AffinityMapType>
+class MedianAffinity {
+
+public:
+
+	typedef typename AffinityMapType::RegionGraphType RegionGraphType;
+	typedef typename AffinityMapType::ValueType       ScoreType;
+	typedef typename RegionGraphType::NodeIdType      NodeIdType;
+	typedef typename RegionGraphType::EdgeIdType      EdgeIdType;
+
+	MedianAffinity(AffinityMapType& affinities) :
+		_affinities(affinities),
+		_affiliatedEdges(affinities.getRegionGraph()) {}
+
+	/**
+	 * Get the score for an edge. An edge will be merged the earlier, the 
+	 * smaller its score is.
+	 */
+	ScoreType operator()(EdgeIdType e) {
 
 		std::vector<EdgeIdType>& affiliatedEdges = _affiliatedEdges[e];
 
 		// initial edges have their own affinity
 		if (affiliatedEdges.size() == 0)
-			return 1.0 - _affinities[e];
+			return _affinities[e];
 
 		// edges resulting from merges consult their affiliated edges
 
@@ -42,8 +123,10 @@ public:
 				}
 		);
 
-		return 1.0 - _affinities[*median];
+		return _affinities[*median];
 	}
+
+	void notifyNodeMerge(NodeIdType a, NodeIdType b, NodeIdType target) {}
 
 	void notifyEdgeMerge(EdgeIdType from, EdgeIdType to) {
 
