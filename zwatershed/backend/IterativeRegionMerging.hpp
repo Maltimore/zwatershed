@@ -96,7 +96,7 @@ private:
 		EdgeCompare(const typename RegionGraphType::template EdgeMap<ScoreType>& edgeScores) :
 			_edgeScores(edgeScores) {}
 
-		bool operator()(const EdgeIdType a, const EdgeIdType b) {
+		bool operator()(EdgeIdType a, EdgeIdType b) {
 
 			return _edgeScores[a] > _edgeScores[b];
 		}
