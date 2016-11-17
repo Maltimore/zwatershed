@@ -41,7 +41,7 @@ double HIGH= .9999;
 bool RECREATE_RG = true;
 
 std::vector<Metrics> process_thresholds(
-		const std::vector<size_t>& thresholds,
+		const std::vector<float>& thresholds,
 		size_t width, size_t height, size_t depth,
 		const float* affinity_data,
 		const std::vector<uint64_t*>& segmentation_data,
@@ -63,7 +63,7 @@ std::vector<Metrics> process_thresholds(
 
 	for (int i = 0; i < thresholds.size(); i++) {
 
-		size_t threshold = thresholds[i];
+		float threshold = thresholds[i];
 
 		std::cout << "merging until threshold " << threshold << std::endl;
 		regionMerging.mergeUntil(

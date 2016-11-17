@@ -19,7 +19,7 @@ def zwatershed(np.ndarray[np.float32_t, ndim=4] affs, thresholds, np.ndarray[uin
 
             The affinities as an array with affs[channel][z][y][x].
 
-        thresholds: list of int
+        thresholds: list of float32
 
             The thresholds to compute segmentations for. For each threshold, one
             segmentation is returned.
@@ -107,7 +107,7 @@ cdef extern from "c_frontend.h":
         double rand_merge
 
     vector[Metrics] process_thresholds(
-            vector[size_t] thresholds,
+            vector[float] thresholds,
             size_t width, size_t height, size_t depth,
             np.float32_t* affs,
             vector[uint64_t*]& segmentation_data,
