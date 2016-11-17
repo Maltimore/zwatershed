@@ -11,7 +11,7 @@ template<typename V, typename F, typename FN>
 inline void
 merge_segments_with_function(
         V& seg,
-        const region_graph_ptr<typename V::element, F> rg_ptr,
+        const region_graph_ptr<typename V::element> rg_ptr,
         counts_t<std::size_t>& counts,
         const FN& func,
         size_t low,
@@ -23,7 +23,7 @@ merge_segments_with_function(
 	// seems to be the connected components
     zi::disjoint_sets<ID> sets(counts.size());
 
-    region_graph<ID,F>& rg  = *rg_ptr;
+    RegionGraph<ID>& rg  = *rg_ptr;
 
 	// Merge *all* edges that have a score below the threshold in one pass. This 
 	// does not update the region graph and re-evaluate the edge scores. This is 
@@ -37,11 +37,12 @@ merge_segments_with_function(
 	//   merge(RAG, 4) != merge(merge(RAG, 2), 4)
 	//
 	// This is also too greedy. Expensive edges can be merged before cheap ones.
-    for ( auto& edge: rg )
+    for ( auto& edge: rg.edges() )
     {
 		// "size" is actually the merge score
 		// "weight" is probably the affinity?
-        std::size_t size = func(edge.affinity);
+		// FIXME (or not): affinities are not property of edge anymore
+        std::size_t size = func(/*edge.affinity*/0);
 
 		// we don't merge 0 scores? why?
         if ( size == 0 )
@@ -50,8 +51,8 @@ merge_segments_with_function(
         }
 
 		// get the current components of the incident regions
-        ID s1 = sets.find_set(edge.id1);
-        ID s2 = sets.find_set(edge.id2);
+        ID s1 = sets.find_set(edge.u);
+        ID s2 = sets.find_set(edge.v);
 
         // std::cout << s1 << " " << s2 << " " << size << "\n";
 
@@ -139,18 +140,18 @@ merge_segments_with_function(
 
 	// create a new RG because the region ids changed and new edges have to be 
 	// added
-    region_graph<ID,F> new_rg;
+    RegionGraph<ID> new_rg;
 
 	// a set of IDs for each region
 	// are these the subsets?
     std::vector<std::set<ID>> in_rg(next_id);
 
 	// re-visit each edge of the original region graph
-    for ( auto& edge: rg )
+    for ( auto& edge: rg.edges() )
     {
 		// find the two new incident regions
-        ID s1 = remaps[sets.find_set(edge.id1)];
-        ID s2 = remaps[sets.find_set(edge.id2)];
+        ID s1 = remaps[sets.find_set(edge.u)];
+        ID s2 = remaps[sets.find_set(edge.v)];
 
 		// if they are different
         if ( s1 != s2 && s1 && s2 )
@@ -163,7 +164,7 @@ merge_segments_with_function(
 				// add a new edge
 				// FIXME: edge weight is just the first score ever encountered! 
 				// neither the max or average or whatever!
-                new_rg.push_back(RegionGraphEdge<ID,F>(edge.affinity, mm.first, mm.second));
+                new_rg.addEdge(mm.first, mm.second);
                 in_rg[mm.first].insert(mm.second);
             }
         }
@@ -173,5 +174,5 @@ merge_segments_with_function(
         rg.swap(new_rg);
 
     std::cout << "\tDone with updating the region graph, size: "
-              << rg.size() << std::endl;
+              << rg.edges().size() << std::endl;
 }

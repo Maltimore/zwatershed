@@ -7,6 +7,8 @@
 #include <vector>
 #include <tuple>
 
+#include "RegionGraph.hpp"
+
 template < typename T > struct watershed_traits;
 
 template <> struct watershed_traits<uint32_t>
@@ -65,29 +67,8 @@ using affinity_graph_ptr = std::shared_ptr<affinity_graph<T>>;
 template < typename T >
 using affinity_graph_ref_ptr = std::shared_ptr<affinity_graph_ref<T>>;
 
-template <typename N, typename A>
-struct RegionGraphEdge {
-
-	typedef N NodeIdType;
-	typedef A AffinityType;
-
-	NodeIdType id1;
-	NodeIdType id2;
-	AffinityType affinity;
-
-	RegionGraphEdge() : id1(0), id2(0), affinity(0) {}
-	RegionGraphEdge(NodeIdType id1_, NodeIdType id2_, AffinityType affinity_) : id1(id1_), id2(id2_), affinity(affinity_) {}
-
-	bool operator>(const RegionGraphEdge<NodeIdType, AffinityType>& other) const {
-		return affinity > other.affinity;
-	}
-};
-
-template< typename ID, typename F >
-using region_graph = std::vector<RegionGraphEdge<ID, F>>;
-
-template< typename ID, typename F >
-using region_graph_ptr = std::shared_ptr<region_graph<ID,F>>;
+template< typename ID >
+using region_graph_ptr = std::shared_ptr<RegionGraph<ID>>;
 
 template < typename T >
 using counts_t = std::vector<T>;

@@ -4,48 +4,29 @@
 #include <vector>
 #include <map>
 #include <queue>
-#include <limits>
 
-#include "types.hpp"
+#include "RegionGraph.hpp"
 
 template <typename NodeIdType, typename AffinityType, typename ScoreType = AffinityType>
 class IterativeRegionMerging {
 
 public:
 
-	typedef region_graph<NodeIdType, AffinityType>    RegionGraphType;
-	typedef RegionGraphEdge<NodeIdType, AffinityType> EdgeType;
-	typedef std::size_t                               EdgeIdType;
-
-	static const EdgeIdType NoEdge = std::numeric_limits<EdgeIdType>::max();
+	typedef RegionGraph<NodeIdType>              RegionGraphType;
+	typedef typename RegionGraphType::EdgeType   EdgeType;
+	typedef typename RegionGraphType::EdgeIdType EdgeIdType;
 
 	/**
 	 * Create a region merging for the given initial RAG.
 	 */
-	IterativeRegionMerging(region_graph_ptr<NodeIdType, AffinityType> initialRegionGraph) :
+	IterativeRegionMerging(
+			std::shared_ptr<RegionGraphType> initialRegionGraph) :
 		_regionGraphPointer(initialRegionGraph),
 		_regionGraph(*initialRegionGraph),
+		_affiliatedEdges(*initialRegionGraph),
+		_edgeScores(*initialRegionGraph),
 		_edgeQueue(EdgeCompare(_edgeScores)),
-		_mergedUntil(0) {
-
-		NodeIdType maxNodeId = 0;
-
-		// prepare reverse lookup for nodes to edges
-		for (EdgeIdType e = 0; e < _regionGraph.size(); e++) {
-
-			NodeIdType u = _regionGraph[e].id1;
-			NodeIdType v = _regionGraph[e].id2;
-
-			_incidentEdges[u].push_back(e);
-			_incidentEdges[v].push_back(e);
-
-			maxNodeId = std::max(maxNodeId, std::max(u, v));
-		}
-
-		_affiliatedEdges.resize(_regionGraph.size());
-		_edgeScores.resize(_regionGraph.size());
-		_nextNodeId = maxNodeId + 1;
-	}
+		_mergedUntil(0) {}
 
 	/**
 	 * Merge a RAG with the given edge scoring function until the given threshold.
@@ -63,7 +44,7 @@ public:
 
 		// compute scores of each edge not scored so far
 		if (_mergedUntil == 0)
-			for (EdgeIdType e = 0; e < _regionGraph.size(); e++)
+			for (EdgeIdType e = 0; e < _regionGraph.edges().size(); e++)
 				scoreEdge(e, edgeScoringFunction);
 
 		// while there are still unhandled edges
@@ -78,8 +59,8 @@ public:
 			if (score >= threshold)
 				break;
 
-			NodeIdType u = _regionGraph[next].id1;
-			NodeIdType v = _regionGraph[next].id2;
+			NodeIdType u = _regionGraph.edge(next).u;
+			NodeIdType v = _regionGraph.edge(next).v;
 
 			// skip if incident regions already got merged
 			if (!isRoot(u) || !isRoot(v))
@@ -114,7 +95,7 @@ private:
 
 	public:
 
-		EdgeCompare(const std::vector<ScoreType>& edgeScores) :
+		EdgeCompare(const typename RegionGraphType::template EdgeMap<ScoreType>& edgeScores) :
 			_edgeScores(edgeScores) {}
 
 		bool operator()(const EdgeIdType a, const EdgeIdType b) {
@@ -124,7 +105,7 @@ private:
 
 	private:
 
-		const std::vector<ScoreType>& _edgeScores;
+		const typename RegionGraphType::template EdgeMap<ScoreType>& _edgeScores;
 	};
 
 	/**
@@ -137,8 +118,7 @@ private:
 			const EdgeScoringFunction& edgeScoringFunction) {
 
 		// create a new node c = a + b
-		NodeIdType c = _nextNodeId;
-		_nextNodeId++;
+		NodeIdType c = _regionGraph.addNode();
 
 		// set parents
 		_rootPaths[a] = c;
@@ -150,30 +130,32 @@ private:
 		for (NodeIdType child : { a, b } ) {
 
 			// for all neighbors of child
-			for (EdgeIdType neighborEdge : _incidentEdges[child]) {
+			for (EdgeIdType neighborEdge : _regionGraph.incEdges(child)) {
 
-				NodeIdType neighbor = (
-						_regionGraph[neighborEdge].id1 == child ?
-						_regionGraph[neighborEdge].id2 :
-						_regionGraph[neighborEdge].id1);
+				NodeIdType neighbor = _regionGraph.getOpposite(child, neighborEdge);
 
 				// don't consider already merged regions
 				if (!isRoot(neighbor))
 					continue;
 
 				// do we already have an edge to this neighbor?
-				EdgeIdType newEdge = findEdge(c, neighbor, _incidentEdges[c]);
+				EdgeIdType newEdge = _regionGraph.findEdge(c, neighbor);
 
-				if (newEdge == NoEdge) {
+				// if not, add the edge c
+				if (newEdge == RegionGraphType::NoEdge)
+					newEdge = _regionGraph.addEdge(c, neighbor);
 
-					// add the edge c -- neighbor, with temporary affinity of 0
-					newEdge = addEdge(c, neighbor, 0);
-				}
+				// TODO: delegate affiliated edge book-keeping to scoring 
+				// function
 
 				// add affiliated edges to new edge
-				if (_affiliatedEdges[neighborEdge].size() == 0) // initial edge
-					_affiliatedEdges[newEdge].push_back(_regionGraph[neighborEdge]);
+				if (_affiliatedEdges[neighborEdge].size() == 0)
+					// neighborEdge is an initial edge, add it to the new edge 
+					// affiliated edge list
+					_affiliatedEdges[newEdge].push_back(neighborEdge);
 				else
+					// neighborEdge is a compound edge, copy its affiliated 
+					// edges to the new affiliated edge list
 					std::copy(
 							_affiliatedEdges[neighborEdge].begin(),
 							_affiliatedEdges[neighborEdge].end(),
@@ -188,50 +170,8 @@ private:
 		// score all new edges == incident edges to c
 		// it is expected that the scoring function updated the affinities, if it 
 		// needs them
-		for (EdgeIdType e : _incidentEdges[c])
+		for (EdgeIdType e : _regionGraph.incEdges(c))
 			scoreEdge(e, edgeScoringFunction);
-	}
-
-	/**
-	 * Create a new edge between u and v.
-	 */
-	EdgeIdType addEdge(NodeIdType u, NodeIdType v, AffinityType affinity) {
-
-		EdgeIdType newEdge = _regionGraph.size();
-
-		_regionGraph.push_back(EdgeType(u, v, affinity));
-		_affiliatedEdges.push_back(std::vector<EdgeType>());
-		_edgeScores.push_back(0);
-		_incidentEdges[u].push_back(newEdge);
-		_incidentEdges[v].push_back(newEdge);
-
-		return newEdge;
-	}
-
-	/**
-	 * Find the edge connecting u and v. Returns NoEdge, if there is none.
-	 */
-	inline EdgeIdType findEdge(NodeIdType u, NodeIdType v) {
-
-		return findEdge(u, v, _regionGraph);
-	}
-
-	/**
-	 * Same as findEdge(u, v), but restricted to edges in pool.
-	 */
-	inline EdgeIdType findEdge(NodeIdType u, NodeIdType v, const std::vector<EdgeIdType>& pool) {
-
-		NodeIdType min = std::min(u, v);
-		NodeIdType max = std::max(u, v);
-
-		for (EdgeIdType e : pool) {
-
-			if (std::min(_regionGraph[e].id1, _regionGraph[e].id2) == min &&
-				std::max(_regionGraph[e].id1, _regionGraph[e].id2) == max)
-				return e;
-		}
-
-		return NoEdge;
 	}
 
 	/**
@@ -240,16 +180,8 @@ private:
 	template <typename EdgeScoringFunction>
 	ScoreType scoreEdge(EdgeIdType e, const EdgeScoringFunction& edgeScoringFunction) {
 
-		const EdgeType& edge = _regionGraph[e];
-		std::vector<EdgeType>& affiliatedEdges = _affiliatedEdges[e];
-
-		if (edge.id1 == edge.id2) {
-
-			std::cout << "encountered self-referencing edge, skipping it" << std::endl;
-			return 0;
-		}
-
-		ScoreType score = edgeScoringFunction(edge, affiliatedEdges);
+		std::vector<EdgeIdType>& affiliatedEdges = _affiliatedEdges[e];
+		ScoreType score = edgeScoringFunction(e, affiliatedEdges);
 
 		_edgeScores[e] = score;
 		_edgeQueue.push(e);
@@ -291,11 +223,8 @@ private:
 	}
 
 	// shared pointer just to protect lifetime of region graph
-	region_graph_ptr<NodeIdType, AffinityType> _regionGraphPointer;
+	std::shared_ptr<RegionGraphType> _regionGraphPointer;
 	RegionGraphType& _regionGraph;
-
-	// reverse look-up from nodes to edges
-	std::map<NodeIdType, std::vector<EdgeIdType>> _incidentEdges;
 
 	// for every new edge between regions u and v, the edges of the initial RAG 
 	// between any child of u and any child of v
@@ -303,12 +232,12 @@ private:
 	// initial edges will have this empty
 	//
 	// congruent to _regionGraph
-	std::vector<std::vector<EdgeType>> _affiliatedEdges;
+	typename RegionGraphType::template EdgeMap<std::vector<EdgeIdType>> _affiliatedEdges;
 
 	// the score of each edge
 	//
 	// congruent to _regionGraph
-	std::vector<ScoreType> _edgeScores;
+	typename RegionGraphType::template EdgeMap<ScoreType> _edgeScores;
 
 	// sorted list of edges indices, cheapest edge first
 	std::priority_queue<EdgeIdType, std::vector<EdgeIdType>, EdgeCompare> _edgeQueue;

@@ -25,7 +25,8 @@ void
 get_region_graph( const AG& aff,
                   const V& seg,
                   std::size_t max_segid,
-                  region_graph<typename V::element, typename AG::element>& rg)
+                  RegionGraph<typename V::element>& rg,
+				  typename RegionGraph<typename V::element>::template EdgeMap<typename AG::element>& affMap)
 {
     typedef typename AG::element        F;
     typedef typename V::element         ID;
@@ -66,11 +67,12 @@ get_region_graph( const AG& aff,
         {
 			// p.first is ID
 			// p.second is F
-            rg.emplace_back(id1, p.first, p.second);
-            //std::cout << p.second << " " << id1 << " " << p.first << "\n";
+			auto edgeId = rg.addEdge(id1, p.first);
+			affMap[edgeId] = p.second;
+			//std::cout << p.second << " " << id1 << " " << p.first << "\n";
         }
     }
 
-    std::cout << "Region graph size: " << rg.size() << std::endl;
+    std::cout << "Region graph number of edges: " << rg.edges().size() << std::endl;
 
 }

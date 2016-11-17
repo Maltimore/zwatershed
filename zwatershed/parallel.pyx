@@ -39,7 +39,7 @@ def partition_subvols(pred_file,out_folder,max_len):
 def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NULL/"):
 
     cdef np.ndarray[uint64_t, ndim=3] segmentation
-    cdef RegionGraphEdge[uint64_t,float] edge
+    cdef RegionGraphEdge[uint64_t] edge
 
     makedirs(seg_save_path)
 
@@ -71,15 +71,16 @@ def zwatershed_basic_h5(np.ndarray[np.float32_t, ndim=4] affs, seg_save_path="NU
         counts_ds = dereference(state.counts)[i]
 
     # store region graph
-    num_edges = dereference(state.region_graph).size()
+    num_edges = dereference(state.region_graph).edges().size()
     print("Storing region graph with " + str(num_edges) + " edges")
     edges_ds = f.create_dataset('rg_edges', (num_edges, 2), dtype='uint64')
     weights_ds = f.create_dataset('rg_weights', (num_edges,), dtype='float32')
     for i in range(num_edges):
-        edge = dereference(state.region_graph)[i]
-        edges_ds[i,0] = edge.id1
-        edges_ds[i,1] = edge.id2
-        weights_ds[i] = edge.affinity
+        edge = dereference(state.region_graph).edge(i)
+        edges_ds[i,0] = edge.u
+        edges_ds[i,1] = edge.v
+        # FIXME: affinities should be read from affinity edge map
+        #weights_ds[i] = edge.affinity
     f.close()
 
 def makedirs(seg_save_path):
@@ -273,14 +274,17 @@ def merge_by_thresh(seg,seg_sizes,rg,thresh):
 
 cdef extern from "c_frontend.h":
 
-    cdef cppclass RegionGraphEdge[ID,F]:
-        ID id1
-        ID id2
-        F affinity
+    cdef cppclass RegionGraphEdge[ID]:
+        ID u
+        ID v
+
+    cdef cppclass RegionGraph[ID]:
+        vector[RegionGraphEdge[ID]] edges()
+        RegionGraphEdge[ID] edge(size_t)
 
     struct ZwatershedState:
-        shared_ptr[vector[RegionGraphEdge[uint64_t,float]]] region_graph
-        shared_ptr[vector[size_t]]          counts
+        shared_ptr[RegionGraph[uint64_t]] region_graph
+        shared_ptr[vector[size_t]]        counts
 
     ZwatershedState get_initial_state(
             size_t width, size_t height, size_t depth,
