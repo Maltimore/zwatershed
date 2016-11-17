@@ -53,8 +53,8 @@ std::vector<Metrics> process_thresholds(
 
 	std::vector<Metrics> threshold_metrics;
 
-	IterativeRegionMerging<uint64_t, float> regionMerging(state.region_graph);
-	MedianAffinity<uint64_t, float> mergeFunction(*state.edge_affinities);
+	IterativeRegionMerging<uint64_t, float> regionMerging(*state.region_graph);
+	MedianAffinity<uint64_t, float> mergeFunction(*state.region_graph, *state.edge_affinities);
 
 	for (int i = 0; i < thresholds.size(); i++) {
 

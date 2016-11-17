@@ -19,12 +19,9 @@ public:
 	/**
 	 * Create a region merging for the given initial RAG.
 	 */
-	IterativeRegionMerging(
-			std::shared_ptr<RegionGraphType> initialRegionGraph) :
-		_regionGraphPointer(initialRegionGraph),
-		_regionGraph(*initialRegionGraph),
-		_affiliatedEdges(*initialRegionGraph),
-		_edgeScores(*initialRegionGraph),
+	IterativeRegionMerging(RegionGraphType& initialRegionGraph) :
+		_regionGraph(initialRegionGraph),
+		_edgeScores(initialRegionGraph),
 		_edgeQueue(EdgeCompare(_edgeScores)),
 		_mergedUntil(0) {}
 
@@ -33,7 +30,7 @@ public:
 	 */
 	template <typename EdgeScoringFunction>
 	void mergeUntil(
-			const EdgeScoringFunction& edgeScoringFunction,
+			EdgeScoringFunction& edgeScoringFunction,
 			ScoreType threshold) {
 
 		if (threshold <= _mergedUntil) {
@@ -115,7 +112,7 @@ private:
 	void mergeRegions(
 			NodeIdType a,
 			NodeIdType b,
-			const EdgeScoringFunction& edgeScoringFunction) {
+			EdgeScoringFunction& edgeScoringFunction) {
 
 		// create a new node c = a + b
 		NodeIdType c = _regionGraph.addNode();
@@ -145,31 +142,11 @@ private:
 				if (newEdge == RegionGraphType::NoEdge)
 					newEdge = _regionGraph.addEdge(c, neighbor);
 
-				// TODO: delegate affiliated edge book-keeping to scoring 
-				// function
-
-				// add affiliated edges to new edge
-				if (_affiliatedEdges[neighborEdge].size() == 0)
-					// neighborEdge is an initial edge, add it to the new edge 
-					// affiliated edge list
-					_affiliatedEdges[newEdge].push_back(neighborEdge);
-				else
-					// neighborEdge is a compound edge, copy its affiliated 
-					// edges to the new affiliated edge list
-					std::copy(
-							_affiliatedEdges[neighborEdge].begin(),
-							_affiliatedEdges[neighborEdge].end(),
-							std::back_inserter(_affiliatedEdges[newEdge]));
-
-				// clear affiliated edges of merged region edges -- they are not 
-				// needed anymore
-				_affiliatedEdges[neighborEdge].clear();
+				edgeScoringFunction.notifyEdgeMerge(neighborEdge, newEdge);
 			}
 		}
 
 		// score all new edges == incident edges to c
-		// it is expected that the scoring function updated the affinities, if it 
-		// needs them
 		for (EdgeIdType e : _regionGraph.incEdges(c))
 			scoreEdge(e, edgeScoringFunction);
 	}
@@ -178,10 +155,9 @@ private:
 	 * Score edge i.
 	 */
 	template <typename EdgeScoringFunction>
-	ScoreType scoreEdge(EdgeIdType e, const EdgeScoringFunction& edgeScoringFunction) {
+	ScoreType scoreEdge(EdgeIdType e, EdgeScoringFunction& edgeScoringFunction) {
 
-		std::vector<EdgeIdType>& affiliatedEdges = _affiliatedEdges[e];
-		ScoreType score = edgeScoringFunction(e, affiliatedEdges);
+		ScoreType score = edgeScoringFunction(e);
 
 		_edgeScores[e] = score;
 		_edgeQueue.push(e);
@@ -222,21 +198,9 @@ private:
 		return root;
 	}
 
-	// shared pointer just to protect lifetime of region graph
-	std::shared_ptr<RegionGraphType> _regionGraphPointer;
 	RegionGraphType& _regionGraph;
 
-	// for every new edge between regions u and v, the edges of the initial RAG 
-	// between any child of u and any child of v
-	//
-	// initial edges will have this empty
-	//
-	// congruent to _regionGraph
-	typename RegionGraphType::template EdgeMap<std::vector<EdgeIdType>> _affiliatedEdges;
-
 	// the score of each edge
-	//
-	// congruent to _regionGraph
 	typename RegionGraphType::template EdgeMap<ScoreType> _edgeScores;
 
 	// sorted list of edges indices, cheapest edge first
