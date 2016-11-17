@@ -49,12 +49,13 @@ public:
 
 			// get the next cheapest edge to merge
 			EdgeIdType next = _edgeQueue.top();
-			_edgeQueue.pop();
 
 			// stop, if the threshold got exceeded
 			ScoreType score = _edgeScores[next];
 			if (score >= threshold)
 				break;
+
+			_edgeQueue.pop();
 
 			NodeIdType u = _regionGraph.edge(next).u;
 			NodeIdType v = _regionGraph.edge(next).v;
