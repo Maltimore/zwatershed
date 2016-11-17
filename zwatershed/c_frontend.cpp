@@ -206,7 +206,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
     for(size_t i=0;i<counts_len;i++)
         counts->push_back(counts_in[i]);
     for(size_t i=0;i<rgn_graph_len;i++)
-        (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
+        (*rg).emplace_back(rgn_graph[i*3],rgn_graph[i*3+1],rgn_graph[i*3+2]);
 
     // merge
     std::cout << "thresh: " << thresh << "\n";
@@ -253,7 +253,7 @@ size_t rgn_graph_len, uint64_t * seg_in, uint64_t*counts_in, size_t counts_len, 
     for(size_t i=0;i<counts_len;i++)
         counts->push_back(counts_in[i]);
     for(size_t i=0;i<rgn_graph_len;i++)
-        (*rg).emplace_back(rgn_graph[i*3+2],rgn_graph[i*3],rgn_graph[i*3+1]);
+        (*rg).emplace_back(rgn_graph[i*3],rgn_graph[i*3+1],rgn_graph[i*3+2]);
 
     // merge
     std::cout << "thresh: " << thresh << "\n";

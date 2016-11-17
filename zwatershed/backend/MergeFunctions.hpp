@@ -1,6 +1,9 @@
 #ifndef MERGE_FUNCTIONS_H__
 #define MERGE_FUNCTIONS_H__
 
+/**
+ * Scores edges with 1 - median affinity.
+ */
 class MedianAffinity {
 
 public:
@@ -14,7 +17,7 @@ public:
 
 		// initial edges have their own affinity
 		if (affiliatedEdges.size() == 0)
-			return edge.affinity;
+			return 1.0 - edge.affinity;
 
 		// edges resulting from merges consult their affiliated edges
 
@@ -29,7 +32,7 @@ public:
 				}
 		);
 
-		return median->affinity;
+		return 1.0 - median->affinity;
 	}
 };
 

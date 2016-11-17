@@ -75,8 +75,8 @@ struct RegionGraphEdge {
 	NodeIdType id2;
 	AffinityType affinity;
 
-	RegionGraphEdge() : affinity(0), id1(0), id2(0) {}
-	RegionGraphEdge(AffinityType affinity_, NodeIdType id1_, NodeIdType id2_) : affinity(affinity_), id1(id1_), id2(id2_) {}
+	RegionGraphEdge() : id1(0), id2(0), affinity(0) {}
+	RegionGraphEdge(NodeIdType id1_, NodeIdType id2_, AffinityType affinity_) : id1(id1_), id2(id2_), affinity(affinity_) {}
 
 	bool operator>(const RegionGraphEdge<NodeIdType, AffinityType>& other) const {
 		return affinity > other.affinity;

@@ -30,7 +30,7 @@ get_region_graph_arb( //const affinity_graph_ptr<F>& aff_ptr,
 
     for ( ID id1 = 1; id1 <= max_segid; ++id1 )
         for ( const auto& p: edges[id1] )
-            rg.emplace_back(p.second, id1, p.first);
+            rg.emplace_back(id1, p.first, p.second);
 
 
     std::stable_sort(std::begin(rg), std::end(rg), std::greater<RegionGraphEdge<ID,F>>());

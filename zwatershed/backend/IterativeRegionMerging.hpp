@@ -55,6 +55,12 @@ public:
 			const EdgeScoringFunction& edgeScoringFunction,
 			ScoreType threshold) {
 
+		if (threshold <= _mergedUntil) {
+
+			std::cout << "already merged until " << threshold << ", skipping" << std::endl;
+			return;
+		}
+
 		// compute scores of each edge not scored so far
 		if (_mergedUntil == 0)
 			for (EdgeIdType e = 0; e < _regionGraph.size(); e++)
@@ -138,8 +144,6 @@ private:
 		_rootPaths[a] = c;
 		_rootPaths[b] = c;
 
-		std::vector<EdgeIdType>& cEdges = _incidentEdges[c];
-
 		// connect c to neighbors of a and b, and update affiliatedEdges
 
 		// for each child region
@@ -157,13 +161,13 @@ private:
 				if (!isRoot(neighbor))
 					continue;
 
-				EdgeIdType newEdge = findEdge(c, neighbor, cEdges);
+				// do we already have an edge to this neighbor?
+				EdgeIdType newEdge = findEdge(c, neighbor, _incidentEdges[c]);
 
 				if (newEdge == NoEdge) {
 
-					// add the edge from c -> neighbor, with temporary affinity of 0
+					// add the edge c -- neighbor, with temporary affinity of 0
 					newEdge = addEdge(c, neighbor, 0);
-					cEdges.push_back(newEdge);
 				}
 
 				// add affiliated edges to new edge
@@ -184,7 +188,7 @@ private:
 		// score all new edges == incident edges to c
 		// it is expected that the scoring function updated the affinities, if it 
 		// needs them
-		for (EdgeIdType e : cEdges)
+		for (EdgeIdType e : _incidentEdges[c])
 			scoreEdge(e, edgeScoringFunction);
 	}
 
@@ -193,11 +197,13 @@ private:
 	 */
 	EdgeIdType addEdge(NodeIdType u, NodeIdType v, AffinityType affinity) {
 
-		_regionGraph.push_back(EdgeType(u, v, affinity));
-		EdgeIdType newEdge = _regionGraph.size() - 1;
+		EdgeIdType newEdge = _regionGraph.size();
 
+		_regionGraph.push_back(EdgeType(u, v, affinity));
 		_affiliatedEdges.push_back(std::vector<EdgeType>());
 		_edgeScores.push_back(0);
+		_incidentEdges[u].push_back(newEdge);
+		_incidentEdges[v].push_back(newEdge);
 
 		return newEdge;
 	}
@@ -232,19 +238,29 @@ private:
 	 * Score edge i.
 	 */
 	template <typename EdgeScoringFunction>
-	void scoreEdge(EdgeIdType e, const EdgeScoringFunction& edgeScoringFunction) {
+	ScoreType scoreEdge(EdgeIdType e, const EdgeScoringFunction& edgeScoringFunction) {
 
 		const EdgeType& edge = _regionGraph[e];
 		std::vector<EdgeType>& affiliatedEdges = _affiliatedEdges[e];
 
-		_edgeScores[e] = edgeScoringFunction(edge, affiliatedEdges);
+		if (edge.id1 == edge.id2) {
+
+			std::cout << "encountered self-referencing edge, skipping it" << std::endl;
+			return 0;
+		}
+
+		ScoreType score = edgeScoringFunction(edge, affiliatedEdges);
+
+		_edgeScores[e] = score;
 		_edgeQueue.push(e);
+
+		return score;
 	}
 
 	inline bool isRoot(NodeIdType id) {
 
 		// if there is no root path, it is a root
-		return (_rootPaths.count(id) != 0);
+		return (_rootPaths.count(id) == 0);
 	}
 
 	/**
@@ -252,8 +268,13 @@ private:
 	 */
 	NodeIdType getRoot(NodeIdType id) {
 
-		NodeIdType root = id;
+		// early way out
+		if (isRoot(id))
+			return id;
 
+		// walk up to root
+
+		NodeIdType root = _rootPaths.at(id);
 		while (!isRoot(root))
 			root = _rootPaths.at(root);
 

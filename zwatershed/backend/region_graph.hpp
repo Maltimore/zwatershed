@@ -40,19 +40,19 @@ get_region_graph( const AG& aff,
         for ( std::ptrdiff_t y = 0; y < ydim; ++y )
             for ( std::ptrdiff_t x = 0; x < xdim; ++x )
             {
-                if ( (z > 0) && seg[z][y][x] && seg[z-1][y][x] )
+                if ( (z > 0) && seg[z][y][x] != seg[z-1][y][x] )
                 {
                     auto mm = std::minmax(seg[z][y][x], seg[z-1][y][x]);
                     F& curr = edges[mm.first][mm.second];
                     curr = std::max(curr, aff[0][z][y][x]);
                 }
-                if ( (y > 0) && seg[z][y][x] && seg[z][y-1][x] )
+                if ( (y > 0) && seg[z][y][x] != seg[z][y-1][x] )
                 {
                     auto mm = std::minmax(seg[z][y][x], seg[z][y-1][x]);
                     F& curr = edges[mm.first][mm.second];
                     curr = std::max(curr, aff[1][z][y][x]);
                 }
-                if ( (x > 0) && seg[z][y][x] && seg[z][y][x-1] )
+                if ( (x > 0) && seg[z][y][x] != seg[z][y][x-1] )
                 {
                     auto mm = std::minmax(seg[z][y][x], seg[z][y][x-1]);
                     F& curr = edges[mm.first][mm.second];
@@ -64,13 +64,13 @@ get_region_graph( const AG& aff,
     {
         for ( const auto& p: edges[id1] )
         {
-            rg.emplace_back(p.second, id1, p.first);
+			// p.first is ID
+			// p.second is F
+            rg.emplace_back(id1, p.first, p.second);
             //std::cout << p.second << " " << id1 << " " << p.first << "\n";
         }
     }
 
     std::cout << "Region graph size: " << rg.size() << std::endl;
 
-    std::stable_sort(std::begin(rg), std::end(rg),
-                     std::greater<RegionGraphEdge<ID,F>>());
 }
