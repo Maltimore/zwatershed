@@ -65,8 +65,11 @@ using affinity_graph_ptr = std::shared_ptr<affinity_graph<T>>;
 template < typename T >
 using affinity_graph_ref_ptr = std::shared_ptr<affinity_graph_ref<T>>;
 
-template <typename NodeIdType, typename AffinityType>
+template <typename N, typename A>
 struct RegionGraphEdge {
+
+	typedef N NodeIdType;
+	typedef A AffinityType;
 
 	NodeIdType id1;
 	NodeIdType id2;

@@ -26,6 +26,8 @@
 #include "backend/basic_watershed.hpp"
 #include "backend/limit_functions.hpp"
 #include "backend/main_helper.hpp"
+#include "backend/IterativeRegionMerging.hpp"
+#include "backend/MergeFunctions.hpp"
 
 // arb funcs
 #include "backend/region_graph_arb.hpp"
@@ -56,9 +58,19 @@ std::vector<Metrics> process_thresholds(
 
 	std::vector<Metrics> threshold_metrics;
 
+	IterativeRegionMerging<uint64_t, float> regionMerging(state.region_graph);
+	MedianAffinity mergeFunction;
+
 	for (int i = 0; i < thresholds.size(); i++) {
 
 		size_t threshold = thresholds[i];
+
+		std::cout << "merging until threshold " << threshold << std::endl;
+		regionMerging.mergeUntil(
+				mergeFunction,
+				threshold);
+
+		std::cout << "extracting segmentation" << std::endl;
 
 		// wrap segmentation for current iteration (no copy)
 		volume_ref<uint64_t> current_segmentation(
@@ -66,15 +78,7 @@ std::vector<Metrics> process_thresholds(
 				boost::extents[width][height][depth]
 		);
 
-		std::cout << "merging until threshold " << threshold << std::endl;
-		merge_segments_with_function(
-				current_segmentation,
-				state.region_graph,
-				*state.counts,
-				square((double)threshold),
-				10, // TODO: what is it?
-				RECREATE_RG
-		);
+		regionMerging.extractSegmentation(current_segmentation);
 
 		// make a copy of the current segmentation for the next iteration
 		if (i < segmentation_data.size() - 1)
