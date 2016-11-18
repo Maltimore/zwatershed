@@ -69,13 +69,13 @@ std::vector<Metrics> process_thresholds(
 					//mergeFunctionAffinities
 			//)
 	//);
-	//auto mergeFunction = multiply(
-			//oneMinus(
-					//mergeFunctionAffinities
-			//),
-			//mergeFunctionRegionSize
-	//);
-	auto mergeFunction = oneMinus(mergeFunctionAffinities);
+	//auto mergeFunction = oneMinus(mergeFunctionAffinities);
+	auto mergeFunction = multiply(
+			oneMinus(
+					mergeFunctionAffinities
+			),
+			mergeFunctionRegionSize
+	);
 
 	for (int i = 0; i < thresholds.size(); i++) {
 
