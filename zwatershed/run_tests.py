@@ -1,3 +1,4 @@
+from __future__ import print_function, absolute_import
 import numpy as np
 import sys
 import time
@@ -46,74 +47,74 @@ def init():
 def main():
     args = init()
     segs_old, rand_old, segs_new, rand_new = test_eval(args)
-    print "rand",rand_old
+    print("rand",rand_old)
     # test_no_eval(args)
     # test_h5_eval(args)
     # test_h5_no_eval(args)
 
 
 def print_final(segs_old, rand_old, segs_new, rand_new):
-    print "--------Final--------"
-    print rand_old
-    print rand_new
-    print "nsegs", len(np.unique(segs_old[0])), len(np.unique(segs_old[-1]))
-    print "nsegs", len(np.unique(segs_old[0])), len(np.unique(segs_new[-1]))
+    print("--------Final--------")
+    print(rand_old)
+    print(rand_new)
+    print("nsegs", len(np.unique(segs_old[0])), len(np.unique(segs_old[-1])))
+    print("nsegs", len(np.unique(segs_old[0])), len(np.unique(segs_new[-1])))
 
 
 # ------------------------------ test definitions -------------------------------------
 def test_eval(args):
     (gt, aff, threshes, save_threshes, node1, node2, edge_affs, seg_save_path) = args
-    print "\noriginal watershed..."
+    print("\noriginal watershed...")
     start = time.clock()
     segs_old, rand_old = zwatershed_and_metrics(gt, aff, threshes, save_threshes)
-    print "time: ", time.clock() - start
+    print("time: ", time.clock() - start)
 
-    print "\nnew watershed..."
+    print("\nnew watershed...")
     start = time.clock()
     segs_new, rand_new = zwatershed_and_metrics_arb(gt, node1, node2, edge_affs, threshes, save_threshes)
-    print "time: ", time.clock() - start, "\n"
+    print("time: ", time.clock() - start, "\n")
     return segs_old, rand_old, segs_new, rand_new
 
 
 def test_no_eval(args):
     (gt, aff, threshes, save_threshes, node1, node2, edge_affs, seg_save_path) = args
-    print "\noriginal watershed..."
+    print("\noriginal watershed...")
     start = time.clock()
     segs_old = zwatershed(aff, threshes)
-    print "time: ", time.clock() - start
+    print("time: ", time.clock() - start)
 
-    print "\nnew watershed..."
+    print("\nnew watershed...")
     start = time.clock()
     segs_new = zwatershed_arb(gt.shape, node1, node2, edge_affs, save_threshes)
-    print "time: ", time.clock() - start, "\n"
+    print("time: ", time.clock() - start, "\n")
     return segs_old, segs_new
 
 
 def test_h5_eval(args):
     (gt, aff, threshes, save_threshes, node1, node2, edge_affs, seg_save_path) = args
-    print "\noriginal watershed..."
+    print("\noriginal watershed...")
     start = time.clock()
     rand_old = zwatershed_and_metrics_h5(gt, aff, threshes, save_threshes, seg_save_path)
-    print "time: ", time.clock() - start
+    print("time: ", time.clock() - start)
 
-    print "\nnew watershed..."
+    print("\nnew watershed...")
     start = time.clock()
     rand_new = zwatershed_and_metrics_h5_arb(gt, node1, node2, edge_affs, threshes, save_threshes, seg_save_path_arb)
-    print "time: ", time.clock() - start, "\n"
+    print("time: ", time.clock() - start, "\n")
     return rand_old, rand_new
 
 
 def test_h5_no_eval(args):
     (gt, aff, threshes, save_threshes, node1, node2, edge_affs, seg_save_path) = args
-    print "\noriginal watershed..."
+    print("\noriginal watershed...")
     start = time.clock()
     zwatershed_h5(aff, save_threshes, seg_save_path)
-    print "time: ", time.clock() - start
+    print("time: ", time.clock() - start)
 
-    print "\nnew watershed..."
+    print("\nnew watershed...")
     start = time.clock()
     zwatershed_h5_arb(gt.shape, node1, node2, edge_affs, save_threshes, seg_save_path_arb)
-    print "time: ", time.clock() - start, "\n"
+    print("time: ", time.clock() - start, "\n")
 
 
 if __name__ == '__main__':

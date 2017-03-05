@@ -1,6 +1,7 @@
+from __future__ import print_function, absolute_import
 import numpy as np
 import h5py
-from zwatershed import *
+from .zwatershed import *
 import os.path as op
 from itertools import product
 
@@ -14,9 +15,9 @@ def partition_subvols(pred_file,out_folder,max_len):
     dims = np.array(preds.shape[1:])
     num_vols = np.array([int(x/max_len)+1 for x in dims])
     deltas = dims/num_vols
-    print "dims",dims
-    print "num_vols",num_vols
-    print "deltas",deltas
+    print("dims",dims)
+    print("num_vols",num_vols)
+    print("deltas",deltas)
     starts,ends = [],[]
     for x in range(num_vols[0]):
         for y in range(num_vols[1]):
@@ -38,7 +39,7 @@ def zwshed_h5_par(arg):
     preds_small = f['main']
     pred_vol = preds_small[:,s[0]:e[0],s[1]:e[1],s[2]:e[2]]
     zwatershed_basic_h5(pred_vol,seg_save_path)
-    print "finished",seg_save_path,"watershed"
+    print("finished",seg_save_path,"watershed")
 
 def eval_with_par_map(args,num_workers):
     from multiprocessing import Pool
@@ -78,7 +79,7 @@ def stitch_and_save(partition_data,outname):
         rg[:,:2] += inc
         rgs[i] = rg
         inc = np.max(seg)
-        print "i,x,y,z",i,x,y,z
+        print("i,x,y,z",i,x,y,z)
         if not z==0: 
             re,merges = calc_merges(edge_mins=dset_seg[s[0]:e[0],s[1]:e[1],s[2]+3],edge_maxes=seg[:,:,3], re=re, merges=merges)
         if not y==0:
@@ -137,7 +138,7 @@ def calc_merges(edge_mins,edge_maxes, re, merges={}):
 
 def filter_merges(merges):
     COUNT_THRESH = 0
-    print "filter_merges..."
+    print("filter_merges...")
     # only keep strongest edges
     renums,count_maxes = {},{}
     for pair in merges:
@@ -162,7 +163,7 @@ def filter_merges(merges):
     return renums_filtered
     
 def merge(merges_filtered,rgs,i_arr,args,f,max_val=1e5):  
-    print "merge"
+    print("merge")
     # merge segs        
     mp = np.arange(0,max_val+1,dtype='uint64')
     mp[merges_filtered.keys()] = merges_filtered.values()
@@ -180,7 +181,7 @@ def merge(merges_filtered,rgs,i_arr,args,f,max_val=1e5):
     return rgs
 
 def calc_seg_sizes(f): # there must be at least one background pixel   
-    print "calculating seg_sizes all..."
+    print("calculating seg_sizes all...")
     segId,seg_sizes = np.unique(f['seg'],return_counts=True) # this might have to be done in parts
     seg_sizes_proper = np.zeros(segId.max()+1,dtype=np.uint64)
     seg_sizes_proper[segId] = seg_sizes
@@ -192,7 +193,7 @@ def merge_by_thresh(seg,seg_sizes,rg,thresh):
     re = {}
     seg_max = np.max(seg)
     seg_min = np.min(seg)
-    print "calculating renums..."
+    print("calculating renums...")
     for i in range(rg.shape[0]):
         n1,n2,w = rg[i,:]
         size = w*w*thresh
@@ -201,7 +202,7 @@ def merge_by_thresh(seg,seg_sizes,rg,thresh):
             seg_sizes[n1]+=seg_sizes[n2]
             seg_sizes[n2]+=seg_sizes[n1]
     re_filtered = {}
-    print "filtering renums..."
+    print("filtering renums...")
     for key in re:
         val = re[key]
         while val in re:
@@ -209,7 +210,7 @@ def merge_by_thresh(seg,seg_sizes,rg,thresh):
         if key < seg_max and val < seg_max:
             re_filtered[key] = val
     
-    print "renumbering..."
+    print("renumbering...")
     mp = np.arange(0,seg_max+1,dtype='uint64')
     mp[re_filtered.keys()] = re_filtered.values()
     seg = mp[seg]
